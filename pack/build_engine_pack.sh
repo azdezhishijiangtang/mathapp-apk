@@ -58,6 +58,11 @@ sudo cp -a "$WEB"/static/. "$ROOT/opt/mathapp/web/"
 sudo rm -rf "$ROOT/opt/mathapp/web/sw.js"    # APK 里不需要 service worker
 sudo chroot "$ROOT" mkdir -p /tmp /root /dev/shm
 
-sudo tar --numeric-owner -czf "$OUT" -C "$ROOT" .
+# 打包前必须卸掉伪文件系统，否则 /sys 会被打进 tar（读不完、还会报 I/O error）
+sudo umount -lf "$ROOT/dev" "$ROOT/proc" "$ROOT/sys" 2>/dev/null || true
+trap - EXIT
+sudo mkdir -p "$ROOT/proc" "$ROOT/sys" "$ROOT/dev" "$ROOT/dev/shm"
+sudo tar --numeric-owner --exclude=./proc --exclude=./sys --exclude=./dev \
+  -czf "$OUT" -C "$ROOT" .
 sha256sum "$OUT" | tee "$OUT.sha256"
 echo "引擎包：$OUT  $(du -h "$OUT" | cut -f1)"
