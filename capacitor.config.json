@@ -1,0 +1,8 @@
+{
+  "appId": "com.azdezhishi.mathapp",
+  "appName": "数学答疑",
+  "webDir": "www",
+  "android": { "allowMixedContent": true, "webContentsDebuggingEnabled": true },
+  "server": { "androidScheme": "https" },
+  "plugins": { "CapacitorHttp": { "enabled": true } }
+}

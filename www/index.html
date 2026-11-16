@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/icon.svg">
+<title>数学答疑 · 本地验证</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">∑ 数学答疑<span class="dot"></span><small id="engineHint">验证引擎检测中…</small></div>
+  <div class="acts">
+    <button class="ghost" id="btnHist">记录</button>
+    <button class="ghost" id="btnMore">更多</button>
+    <button class="ghost" id="btnCfg">设置</button>
+  </div>
+</header>
+
+<main>
+  <!-- 首屏引导：未配置端点时显示 -->
+  <section id="onboard" class="card onboard hide">
+    <b>先接一个模型</b>
+    <p class="tip">这个应用不内置 API Key。填一个 OpenAI 兼容端点（本机网关、DeepSeek、OpenAI 都行），Key 只存在这台设备的浏览器里。</p>
+    <div class="row"><button class="primary" id="obCfg">去填端点与 Key</button></div>
+    <p class="tip" id="obEngines"></p>
+  </section>
+
+  <section class="ask">
+    <textarea id="q" rows="4" placeholder="粘贴或输入题目（支持 LaTeX）：&#10;例如 设 f(x)=(1+sin x)/(π+2x)，证明 f 在 [0,π/2] 上的最小值为 1/π"></textarea>
+    <details id="kbdWrap" class="card kbd">
+      <summary>公式键盘（手打分数 / 根号 / 上下标）</summary>
+      <math-field id="mf"></math-field>
+      <div class="row">
+        <button class="ghost xs" id="btnMfIns">插入题目</button>
+        <button class="ghost xs" id="btnMfLine">换行插入</button>
+        <button class="ghost xs" id="btnMfClear">清空</button>
+      </div>
+      <div class="meta">插入后是 $$…$$ 形式，KaTeX 渲染与验证器都认。</div>
+    </details>
+    <div class="row">
+      <select id="level">
+        <option value="cheap">快速（1 次调用，不验证修正）</option>
+        <option value="std" selected>标准（解题 + 本地验证 + 反例修正 2 轮）</option>
+        <option value="strict">严格（修正 3 轮）</option>
+      </select>
+      <button id="btnMic" class="ghost">🎤 说题</button>
+      <button id="btnSolve" class="primary">解题</button>
+      <button id="btnStop" class="ghost hide">停止</button>
+    </div>
+    <div class="row">
+      <button class="ghost sm" id="btnOcr">拍照/图片识别</button>
+      <button class="ghost sm" id="btnPaste">粘贴</button>
+      <button class="ghost sm" id="btnClearQ">清空</button>
+      <span class="meta" id="qMeta"></span>
+    </div>
+    <input type="file" id="fileOcr" accept="image/*" class="hide">
+    <div id="ocrBox" class="hide">
+      <img id="ocrPrev" alt="待识别图片">
+      <div class="row">
+        <button class="ghost xs" id="btnOcrAgain">本地 OCR</button>
+        <button class="ghost xs" id="btnOcrModel">模型读图</button>
+        <button class="ghost xs" id="btnOcrDrop">移除</button>
+      </div>
+      <div class="meta" id="ocrStatus"></div>
+      <div id="paneLocal" class="panes hide">
+        <div class="phead">本地 OCR（离线）<span class="meta" id="localConf"></span></div>
+        <pre id="ocrText"></pre>
+        <button class="ghost xs" id="btnUseLocal">用这段</button>
+      </div>
+      <div id="paneVision" class="panes hide">
+        <div class="phead">模型读图<span class="meta" id="visionConf"></span></div>
+        <pre id="ocrVision"></pre>
+        <button class="ghost xs" id="btnUseVision">用这段</button>
+      </div>
+      <div class="row hide" id="ocrFillRow"><button class="primary xs" id="btnOcrFill">填入题目框</button></div>
+    </div>
+  </section>
+
+  <section id="answer" class="card hide">
+    <div class="head">
+      <span class="tag" id="modelTag">—</span>
+      <span class="meta" id="metaTag"></span>
+    </div>
+    <details id="thinkWrap" class="think hide"><summary>思考过程 <span id="thinkLen"></span></summary><pre id="think"></pre></details>
+    <div class="body" id="answerBody"></div>
+    <div class="row hide" id="branchBar"></div>
+    <div class="chips" id="tagChips"></div>
+    <div class="foot row" id="answerFoot">
+      <button class="ghost sm" id="btnCopyAns">复制答案</button>
+      <button class="ghost sm" id="btnCopyTex">复制全文</button>
+      <button class="ghost sm" id="btnSpeak">朗读</button>
+      <button class="ghost sm" id="btnFav">收藏</button>
+      <button class="ghost sm" id="btnWrong">记入错题</button>
+    </div>
+  </section>
+
+  <section id="verify" class="card hide">
+    <div class="head"><b>本地验证</b><span class="meta" id="verifySum"></span></div>
+    <div id="verifyList" class="vlist"></div>
+    <div class="row" id="verifyActs"></div>
+  </section>
+
+  <section id="chat" class="card hide">
+    <div class="head"><b>继续对话</b><span class="meta" id="chatMeta">同一题上追问，上下文保留</span></div>
+    <div id="chatList" class="chatlist"></div>
+    <div class="row">
+      <input id="chatInput" placeholder="就这道题继续问…" autocomplete="off" />
+      <button class="primary" id="chatSend">发送</button>
+    </div>
+    <div class="row">
+      <button class="ghost xs" id="btnChatClear">清空本轮对话</button>
+      <span class="meta" id="chatStat"></span>
+    </div>
+  </section>
+
+  <section id="teach" class="card hide">
+    <div class="head"><b>讲解</b><span class="meta">换个视角再讲一遍</span></div>
+    <div class="row">
+      <select id="persona">
+        <option value="coach">竞赛教练（讲思路与关键一步）</option>
+        <option value="textbook">教材（严谨、从头到尾）</option>
+        <option value="socratic" selected>苏格拉底（只提问，引导我自己想）</option>
+      </select>
+      <button class="primary" id="btnTeach">讲解</button>
+    </div>
+    <details id="teachWrap" class="hide"><summary id="teachSum">讲解内容</summary>
+      <div class="body" id="teachBody"></div>
+      <div class="row"><button class="ghost sm" id="btnTeachCopy">复制讲解</button></div>
+    </details>
+    <div class="row">
+      <input id="followup" placeholder="追问一句…" />
+      <button class="ghost" id="btnFollow">发送</button>
+    </div>
+    <div id="followList" class="vlist"></div>
+  </section>
+
+  <footer class="foot2">
+    <span id="verLine">数学答疑 · 本地验证引擎</span>
+    <span id="costLine"></span>
+  </footer>
+</main>
+
+<!-- 设置 -->
+<div class="sheet hide" id="cfgSheet">
+  <div class="sheetIn">
+    <h3>设置</h3>
+    <label>端点地址（OpenAI 兼容，末尾不带 /chat/completions）
+      <input id="cfgBase" placeholder="https://api.deepseek.com/v1" inputmode="url" autocomplete="off"></label>
+    <label>API Key<input id="cfgKey" type="password" placeholder="sk-…（只存在本机浏览器）" autocomplete="off"></label>
+    <label>模型名<input id="cfgModel" placeholder="deepseek-reasoner" autocomplete="off"></label>
+    <label>视觉模型（读图用，留空=用上面的模型）<input id="cfgVision" placeholder="例如 cn:glm-5.3" autocomplete="off"></label>
+    <div class="two">
+      <label>最大输出 token<input id="cfgMax" type="number" placeholder="24000" inputmode="numeric"></label>
+      <label>温度<input id="cfgTemp" type="number" step="0.1" placeholder="0.6" inputmode="decimal"></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="cfgVerify" checked> 自动本地验证</label>
+    <label class="chk"><input type="checkbox" id="cfgRetry" checked> 正文为空时自动加倍预算重试</label>
+    <div class="presets">
+      <button class="ghost" data-preset="wb">本机网关</button>
+      <button class="ghost" data-preset="ds">DeepSeek</button>
+      <button class="ghost" data-preset="oa">OpenAI</button>
+    </div>
+    <div class="row">
+      <button class="ghost" id="cfgTest">测试连接</button>
+      <button class="primary" id="cfgSave">保存</button>
+      <button class="ghost" id="cfgClose">关闭</button>
+    </div>
+    <p class="tip" id="cfgTestOut"></p>
+    <hr class="sep">
+    <div class="row">
+      <button class="ghost sm" id="btnExport">导出备份</button>
+      <button class="ghost sm" id="btnImport">导入备份</button>
+      <input type="file" id="fileImport" accept="application/json,.json" class="hide">
+      <button class="ghost sm danger" id="btnWipe">清空全部数据</button>
+    </div>
+    <p class="tip">数据只在本机：题目、答案、验证结论存在浏览器 localStorage；Key 不发给除端点以外的任何一方。换设备请用「导出备份」（不含 Key）。</p>
+  </div>
+</div>
+
+<!-- 记录 / 收藏 -->
+<div class="sheet hide" id="histSheet">
+  <div class="sheetIn">
+    <h3>记录 <small id="histCount"></small></h3>
+    <div class="row">
+      <input id="histSearch" placeholder="搜索题目或答案…" autocomplete="off">
+    </div>
+    <div class="tabs">
+      <button class="tab on" data-tab="all">全部</button>
+      <button class="tab" data-tab="fav">收藏</button>
+      <button class="tab" data-tab="bad">有反例</button>
+      <button class="tab" data-tab="due">待复习</button>
+      <button class="tab" data-tab="topic">知识点</button>
+    </div>
+    <div class="row"><button class="primary sm" id="btnReviewStart">开始复习</button>
+      <span class="meta" id="dueHint"></span></div>
+    <div id="histList" class="vlist"></div>
+    <div class="row"><button class="ghost" id="histClose">关闭</button></div>
+  </div>
+</div>
+
+<!-- 错题复习 -->
+<div class="sheet hide" id="reviewSheet">
+  <div class="sheetIn">
+    <h3>错题复习 <small id="rvCount"></small></h3>
+    <div class="qbox" id="rvQ"></div>
+    <div class="body hide" id="rvA"></div>
+    <div class="row"><button class="primary" id="btnRvShow">显示答案</button>
+      <button class="ghost" id="btnRvSkip">跳过</button></div>
+    <div class="row hide" id="rvGrades">
+      <button class="ghost xs" data-g="0">忘了</button>
+      <button class="ghost xs" data-g="3">困难</button>
+      <button class="ghost xs" data-g="4">一般</button>
+      <button class="primary xs" data-g="5">容易</button>
+    </div>
+    <p class="tip" id="rvMeta"></p>
+    <div class="row"><button class="ghost" id="rvClose">关闭</button></div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
+<script src="/static/vendor/katex/katex.min.js" defer></script>
+<script src="/static/vendor/mathlive/mathlive.min.js" defer></script>
+<script src="/static/vendor/mlp/mathseg.min.js"></script>
+<script src="/static/vendor/mlp/zip.min.js"></script>
+<script src="/static/js/native.js"></script>
+  <script src="/static/js/core.js"></script>
+<script src="/static/js/store.js"></script>
+<script src="/static/js/app.js"></script>
+<script src="/static/js/chat.js"></script>
+<script src="/static/js/extra.js"></script>
+<script src="/static/vendor/tess/tesseract.min.js" defer></script>
+
+<section class="sheet hide" id="moreSheet">
+  <div class="sheetHead"><b>更多工具</b><button class="ghost xs" data-close="moreSheet">关闭</button></div>
+  <div class="row"><button id="btnBatch">整页批改</button><button id="btnWeek">学习周报</button><button id="btnG3">立体画板</button></div>
+  <div class="row"><button class="ghost" id="btnPrintWrong">导出错题卷（打印 / 存 PDF）</button></div>
+  <div class="meta">整页批改：一页多题，逐题判定并进错题本；学习周报：本周错因与复习完成率；立体画板：拖拽旋转，导出图片给模型看。</div>
+</section>
+
+<section class="sheet hide" id="batchSheet">
+  <div class="sheetHead"><b>整页批改</b><button class="ghost xs" data-close="batchSheet">关闭</button></div>
+  <div class="row"><input type="file" id="batchFile" accept="image/*" capture="environment" hidden><button id="btnBatchPick">选图</button><button class="ghost" id="btnBatchRun" disabled>开始批改</button></div>
+  <div class="meta" id="batchStatus">选一张整页作业图，先读题再逐题判定（最多 6 题）。</div>
+  <div id="batchList"></div>
+</section>
+
+<section class="sheet hide" id="weekSheet">
+  <div class="sheetHead"><b>学习周报</b><button class="ghost xs" data-close="weekSheet">关闭</button></div>
+  <div id="weekBody"></div>
+  <div class="row"><button class="ghost" id="btnWeekPrint">打印 / 存 PDF</button></div>
+</section>
+
+<section class="sheet hide" id="g3Sheet">
+  <div class="sheetHead"><b>立体画板</b><button class="ghost xs" data-close="g3Sheet">关闭</button></div>
+  <div class="row"><select id="g3Preset"><option value="cube">正方体</option><option value="tetra">正四面体</option><option value="pyramid">正四棱锥</option><option value="prism">正三棱柱</option></select><button class="ghost xs" id="g3Reset">复位</button></div>
+  <canvas id="g3c" width="640" height="640" style="width:100%;max-width:520px;touch-action:none;background:#0b1020;border-radius:10px"></canvas>
+  <div class="row"><button id="g3Png">导出图片</button><button class="ghost xs" id="g3Show">显示/隐藏虚线</button></div>
+  <div class="meta">拖动旋转，双指/滚轮缩放；导出的图会进图片识别流程。</div>
+</section>
+</body>
+</html>

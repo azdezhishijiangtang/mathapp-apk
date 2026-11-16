@@ -1,0 +1,14 @@
+{
+  "name": "数学答疑 · 本地验证",
+  "short_name": "数学答疑",
+  "description": "解题 + 本机独立验证（SymPy / z3 / Arb / CP-SAT / cvc5 / Gröbner）",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

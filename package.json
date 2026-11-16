@@ -1,0 +1,17 @@
+{
+  "name": "mathapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI 数学答疑（离线验证引擎 + BYOK 模型）",
+  "scripts": {
+    "sync": "cap sync android",
+    "open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.6.2",
+    "@capacitor/android": "8.6.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2"
+  }
+}
