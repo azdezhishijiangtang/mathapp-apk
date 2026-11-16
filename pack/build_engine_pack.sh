@@ -18,8 +18,8 @@ ROOT=$HERE/rootfs
 [ -f "$WEB/index.html" ] || { echo "找不到 $WEB/index.html"; exit 1; }
 
 sudo rm -rf "$ROOT"; sudo mkdir -p "$ROOT"
-sudo debootstrap --arch=arm64 --variant=minbase --include=ca-certificates \
-  "$SUITE" "$ROOT" "$MIRROR"
+sudo debootstrap --arch=arm64 --variant=minbase --components=main,universe \
+  --include=ca-certificates "$SUITE" "$ROOT" "$MIRROR"
 
 sudo mount --bind /dev "$ROOT/dev"
 sudo mount --bind /proc "$ROOT/proc"
@@ -27,6 +27,11 @@ sudo mount --bind /sys "$ROOT/sys"
 trap 'sudo umount -lf "$ROOT/dev" "$ROOT/proc" "$ROOT/sys" 2>/dev/null || true' EXIT
 
 printf 'nameserver 8.8.8.8\nnameserver 1.1.1.1\n' | sudo tee "$ROOT/etc/resolv.conf" >/dev/null
+# minbase 的 sources 常常只有 main，pari-gp / python3-pip 在 universe
+sudo tee "$ROOT/etc/apt/sources.list" >/dev/null <<SLIST
+deb $MIRROR $SUITE main universe
+deb $MIRROR $SUITE-updates main universe
+SLIST
 
 sudo chroot "$ROOT" /bin/bash -euo pipefail <<'INNER'
 export DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8
