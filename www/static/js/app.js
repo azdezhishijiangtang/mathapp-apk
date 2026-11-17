@@ -698,7 +698,9 @@ function autoGrow() {
 }
 
 function syncOnboard() {
-  $('onboard').classList.toggle('hide', !!S.cfg.base);
+  // 引导只在"没配端点 且 没看过"时出现一次；看过就永久不再打扰（菜单里可重新打开）
+  const need = !S.cfg.base && !S.cfg.onboarded;
+  $('onboard').classList.toggle('hide', !need);
 }
 
 function bind() {
@@ -799,13 +801,20 @@ function bind() {
     teach(t);
   };
   $('btnCfg').onclick = openCfg;
-  $('obCfg').onclick = openCfg;
+  $('obCfg').onclick = () => { S.cfg.onboarded = 1; save(); syncOnboard(); openCfg(); };
+  const bHelp = $('btnHelp');
+  if (bHelp) bHelp.onclick = () => {
+    S.cfg.onboarded = 0; save(); syncOnboard();
+    const ms = $('moreSheet'); if (ms) ms.classList.add('hide');
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { }
+  };
   $('btnHist').onclick = openHist;
   $('cfgClose').onclick = () => $('cfgSheet').classList.add('hide');
   $('histClose').onclick = () => $('histSheet').classList.add('hide');
   $('cfgTest').onclick = testConn;
   $('cfgSave').onclick = () => {
     Object.assign(S.cfg, readCfgFromForm());
+    S.cfg.onboarded = 1;
     save(); $('cfgSheet').classList.add('hide'); health(); syncOnboard();
   };
   document.querySelectorAll('[data-preset]').forEach((b) => b.onclick = () => {
@@ -839,6 +848,15 @@ function bind() {
 /* 启动：等所有脚本就位后再绑定，避免与 extra.js 的加载顺序耦合 */
 let __booted = false;
 
+function alertOnce(card) {
+  const b = card.querySelector('b');
+  if (b) b.textContent = '本机验证引擎已就绪（离线，八条引擎）· 点此看详情';
+  if (!card.__click) {
+    card.__click = 1;
+    card.onclick = () => { if (card.classList.contains('ready')) card.classList.toggle('open'); };
+  }
+}
+
 function bindEngine() {
   if (!(window.isNativeApp && window.isNativeApp())) return;
   const card = $('engCard');
@@ -849,7 +867,12 @@ function bindEngine() {
     if (typeof window.engineStatus !== 'function') return;
     window.engineStatus().then((st) => {
       if (!st) return;
-      if (st.ready) { card.classList.add('hide'); return; }
+      if (st.ready) {
+        card.classList.remove('hide'); card.classList.add('ready');
+        alertOnce(card);
+        return;
+      }
+      card.classList.remove('ready', 'open');
       card.classList.remove('hide');
       if (!st.installed && !window.__autoEng) {
         window.__autoEng = true;                       // 单文件 APK：自动解压内置引擎包

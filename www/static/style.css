@@ -431,3 +431,100 @@ button.ghost:hover{background:var(--panel2)}
 pre.code,.think pre{background:#f7f8fa;border:1px solid var(--line);color:var(--fg)}
 .vbarIn i.no{background:#c8ccd4}
 .toast{background:#181a1f;color:#fff}
+
+
+/* ---------- v2.8 版式重排（居中窄栏 + 去边框噪点 + 紧凑首屏） ---------- */
+
+/* 1) 版心：任何屏幕都是居中的窄栏，横屏不再被拉成一条长条 */
+body{
+  max-width:760px;
+  margin:0 auto;
+  padding:0 16px calc(40px + env(safe-area-inset-bottom));
+  font-size:15px; line-height:1.72;
+  background:#fff;
+  -webkit-text-size-adjust:100%;
+}
+main{padding:0}
+
+/* 2) 顶栏：更矮、更安静，只留三个元素 */
+header.bar{
+  height:52px; padding:0 2px; gap:8px;
+  background:#fff; border-bottom:1px solid var(--line);
+  backdrop-filter:none;
+}
+header.bar .brand{font-size:15px;font-weight:650;letter-spacing:.2px;color:var(--fg)}
+header.bar .brand .dot{width:5px;height:5px}
+button.icon{
+  width:36px;height:36px;min-height:36px;padding:0;
+  border-radius:12px;border:none;background:transparent;
+  font-size:19px;line-height:1;color:var(--fg);
+}
+button.icon:hover{background:var(--panel2)}
+
+/* 3) 卡片：去掉硬边框，改成极浅底 + 发丝线，视觉上"分层"而不是"盒子套盒子" */
+.card{
+  border:1px solid #eef0f4;
+  border-radius:14px;
+  padding:14px 15px;
+  margin-bottom:10px;
+  box-shadow:0 1px 2px rgba(16,24,40,.04);
+  background:#fff;
+}
+.card .head{margin-bottom:10px;padding-bottom:0;border-bottom:none}
+.sect{font-size:12px;font-weight:600;letter-spacing:.6px;color:var(--dim);margin:0 0 6px}
+
+/* 4) 首屏：标题小下来，输入框紧跟着，第一屏就能打字 */
+.hero{margin:20px 2px 14px;text-align:left}
+.hero h1{font-size:21px;line-height:1.35;margin:0 0 6px;font-weight:650;letter-spacing:.2px}
+.hero p{font-size:13px;line-height:1.6;color:var(--dim);margin:0}
+
+/* 5) 输入区：像聊天框，不是表单 */
+.ask{background:#fff;border:1px solid var(--line2);border-radius:16px;padding:12px}
+.ask textarea{
+  border:none;padding:2px 2px 6px;font-size:16px;line-height:1.62;
+  min-height:88px;border-radius:0;box-shadow:none;background:#fff;
+}
+.ask textarea:focus{border:none;box-shadow:none;outline:none}
+.ask .row{margin-top:8px;border-top:1px solid #f1f3f6;padding-top:8px}
+
+/* 6) 按钮：统一高度与圆角，主按钮实心蓝，次要按钮浅灰 */
+button{min-height:40px;padding:0 14px;border-radius:12px;font-size:14px;font-weight:500;
+  background:var(--panel2);border:1px solid transparent;color:var(--fg)}
+button.primary{background:var(--acc2);border-color:var(--acc2);color:#fff;font-weight:600}
+button.primary:hover{background:#4360f0}
+button.ghost{background:#fff;border-color:var(--line2)}
+button.sm{min-height:34px;font-size:13px;padding:0 12px;border-radius:10px}
+button.xs{min-height:30px;font-size:12.5px;padding:0 10px;border-radius:9px}
+.row{gap:8px;margin-top:10px}
+
+/* 7) 引导卡：只出现一次，且只留要紧的两行 */
+#onboard{padding:13px 15px;background:var(--panel2);border-color:#e8ebf1}
+#onboard b{font-size:14px;margin-bottom:4px}
+#onboard .tip{margin:0 0 8px}
+#obEngines{display:none}
+
+/* 8) 引擎卡：就绪后收成一行，别占着屏幕 */
+#engCard.ready{padding:9px 14px;background:var(--panel2);border-color:#e8ebf1}
+#engCard.ready .tip,#engCard.ready .row,#engCard.ready .engMore{display:none}
+#engCard.ready b{font-size:13px;font-weight:600;color:var(--dim);margin:0}
+#engCard.open .tip{display:block}
+#engCard.open .row{display:flex}
+#engCard.open{background:#fff}
+
+/* 9) 正文排版：中文行距、公式不折断 */
+.body{font-size:15.5px;line-height:1.78;word-break:normal;overflow-wrap:anywhere}
+.body p{margin:0 0 8px}
+.think{font-size:12.5px;line-height:1.62}
+.tip{font-size:12px;line-height:1.6}
+.katex-display{margin:.5em 0;overflow-x:auto;overflow-y:hidden}
+
+/* 10) 底部：别在首屏留一大块空白文字 */
+.foot2{padding:14px 0 4px;font-size:11px;opacity:.75}
+
+/* 11) 宽屏（平板横屏）时居中留白，不做两栏拉伸 */
+@media (min-width:900px){
+  body{max-width:760px}
+  main{display:block!important;max-width:760px!important;margin:0 auto}
+  #colR{display:block!important}
+  .ask{position:static!important}
+}

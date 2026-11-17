@@ -25,7 +25,7 @@ w.fetch = async () => ({ ok: true, json: async () => ({ engines: [], version: 't
 w.katex = { renderToString: (tex) => '<span class="katex-stub">' + tex + '</span>' };
 
 const src = FILES.map((f) => fs.readFileSync(path.join(JS, f), 'utf8')).join('\n;\n') +
-  '\n;window.__exp={S,Mods,Tree,Store,Branch,render,toast,syncDueBar,boxedOf,normAns,renderVerify,renderCross,callLLM,mkStream,ErrLog,renderDiag};';
+  '\n;window.__exp={S,Mods,Tree,Store,Branch,render,toast,syncDueBar,boxedOf,normAns,renderVerify,renderCross,callLLM,mkStream,ErrLog,renderDiag,syncOnboard,save};';
 try { w.eval(src); } catch (e) { fail.push('脚本加载失败: ' + e.message); }
 w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
 const X = w.__exp || {};
@@ -136,6 +136,20 @@ ok('焦点有可见描边', /input:focus,select:focus,textarea:focus\{[^}]*box-s
 ok('默认白底', /:root\{[\s\S]*?--bg:#ffffff/.test(css));
 ok('主按钮是 DeepSeek 蓝', /--acc2:#4d6bfe/.test(css));
 ok('不再跟随系统深色', /color-scheme: light/.test(css));
+
+// v2.8 版式重排 + 引导只出现一次
+ok('v2.8 样式层存在', /v2\.8 版式重排/.test(css));
+ok('版心收成 760 居中', /body\{[^}]*max-width:760px/.test(css));
+ok('卡片去掉硬边框', /#ef0f4|#eef0f4/.test(css) && /\.card\{[^}]*border:1px solid #eef0f4/.test(css));
+ok('引擎卡就绪后收一行', /#engCard\.ready\{/.test(css) && /#engCard\.ready [^{]*\.row[^{]*\{display:none\}/.test(css));
+const onb = w.document.getElementById('onboard');
+X.S.cfg.base = ''; X.S.cfg.onboarded = 0; X.syncOnboard();
+ok('首次进来看得见引导', !onb.classList.contains('hide'));
+X.S.cfg.onboarded = 1; X.syncOnboard();
+ok('看过之后不再出现引导', onb.classList.contains('hide'));
+X.S.cfg.base = 'http://x/v1'; X.S.cfg.onboarded = 0; X.syncOnboard();
+ok('已配端点不再出现引导', onb.classList.contains('hide'));
+ok('菜单里能重新打开说明', !!w.document.getElementById('btnHelp'));
 
 try { w.close(); } catch (e) {}
 if (fail.length) { console.log('\n失败 ' + fail.length + ' 项'); process.exit(1); }

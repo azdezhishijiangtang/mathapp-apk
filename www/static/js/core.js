@@ -8,7 +8,7 @@ const S = {
   cfg: {
     base: '', key: '', model: '', maxTokens: 24000, temp: 0.6,
     model2: '', modelCheap: '', capDaily: 0,
-    autoVerify: true, autoRetry: true, visionModel: '', vcap: {}
+    autoVerify: true, autoRetry: true, visionModel: '', vcap: {}, onboarded: 0
   },
   items: [],          // 记录（含收藏）
   cur: null,          // 当前这条记录
