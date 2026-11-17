@@ -132,6 +132,11 @@ ok('语义徽章用变量', /\.badge\.ok\{background:color-mix\(in srgb,var\(--a
 ok('浅色主题另有一套变量', /color-scheme: light/.test(css));
 ok('焦点有可见描边', /input:focus,select:focus,textarea:focus\{[^}]*box-shadow/.test(css));
 
+// v2.7 白底
+ok('默认白底', /:root\{[\s\S]*?--bg:#ffffff/.test(css));
+ok('主按钮是 DeepSeek 蓝', /--acc2:#4d6bfe/.test(css));
+ok('不再跟随系统深色', /color-scheme: light/.test(css));
+
 try { w.close(); } catch (e) {}
 if (fail.length) { console.log('\n失败 ' + fail.length + ' 项'); process.exit(1); }
 console.log('\n全部通过');

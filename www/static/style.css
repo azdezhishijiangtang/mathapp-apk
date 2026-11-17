@@ -398,3 +398,36 @@ header.bar{border-bottom-color:var(--line);background:var(--bg)}
 .vitem{background:var(--panel2)}
 .bub.me{background:color-mix(in srgb,var(--acc2) 16%,transparent);
   border-color:color-mix(in srgb,var(--acc2) 38%,transparent)}
+/* ---------- v2.7 白底（对齐 DeepSeek 客户端的观感） ---------- */
+
+/* 一律白底，不再跟随系统深色：页面白、卡片白，只有气泡与输入区用极浅灰分层 */
+:root{
+  color-scheme: light;
+  --bg:#ffffff; --panel:#ffffff; --panel2:#f4f6f8;
+  --line:#e7e9ee; --line2:#d3d7de;
+  --fg:#181a1f; --dim:#6b7280;
+  --acc:#0f9d58; --acc2:#4d6bfe;
+  --warn:#b45309; --bad:#d92d20; --think:#6d5ae0;
+}
+html,body{background:#ffffff;color:var(--fg)}
+header.bar{background:#ffffff;border-bottom:1px solid var(--line)}
+.card,.ask{background:#ffffff;border:1px solid var(--line);box-shadow:0 1px 2px #0f172a0a}
+.ask textarea{background:#ffffff;border:1px solid var(--line2)}
+.ask textarea:focus{background:#ffffff;border-color:var(--acc2)}
+input,select{background:#ffffff;border-color:var(--line2)}
+button{background:#ffffff;border-color:var(--line2);color:var(--fg)}
+button:hover{background:var(--panel2)}
+button.primary{background:var(--acc2);border-color:var(--acc2);color:#fff;box-shadow:0 1px 2px #4d6bfe33}
+button.primary:hover{background:#4360f0;border-color:#4360f0}
+button.ghost{background:#ffffff;border-color:var(--line2);color:var(--fg)}
+button.ghost:hover{background:var(--panel2)}
+.bub.ai,.vitem,.mrow{background:var(--panel2)}
+.bub.me{background:color-mix(in srgb,var(--acc2) 10%,#fff);
+  border-color:color-mix(in srgb,var(--acc2) 26%,#fff)}
+.body .boxed{background:color-mix(in srgb,var(--acc2) 9%,#fff);
+  border-color:color-mix(in srgb,var(--acc2) 32%,#fff);color:var(--fg)}
+.tag{background:color-mix(in srgb,var(--acc2) 10%,#fff);color:var(--acc2);
+  border-color:color-mix(in srgb,var(--acc2) 30%,#fff)}
+pre.code,.think pre{background:#f7f8fa;border:1px solid var(--line);color:var(--fg)}
+.vbarIn i.no{background:#c8ccd4}
+.toast{background:#181a1f;color:#fff}
