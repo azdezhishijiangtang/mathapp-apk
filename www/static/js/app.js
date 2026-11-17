@@ -669,6 +669,7 @@ function openItem(h) {
   $('teach').classList.remove('hide');
   renderChat();
   $('histSheet').classList.add('hide');
+  try { syncHero(); } catch (e) { }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1057,5 +1058,38 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (e) { }
       try { await Store.Snap.maybeDaily(); } catch (e) { }
     }, 1500);
+  } catch (e) { }
+});
+
+/* ---- v2.5 像聊天客户端一样：顶栏只有两个图标，空状态一句问候 ---- */
+
+function openSheetCard(id) { const e = $(id); if (e) e.classList.remove('hide'); }
+
+function syncHero() {
+  const h = $('hero');
+  if (!h) return;
+  const ans = $('answer');
+  const visible = !!(ans && !ans.classList.contains('hide'));
+  h.classList.toggle('hide', visible);
+}
+
+function newSession() {
+  try { if (S.abort) S.abort(); } catch (e) { }
+  S.cur = null;
+  const q = $('q');
+  if (q) { q.value = ''; q.style.height = ''; }
+  ['answer', 'verify', 'chat', 'teach', 'ocrBox'].forEach((k) => { const e = $(k); if (e) e.classList.add('hide'); });
+  ['answerBody', 'chatList', 'followList'].forEach((k) => { const e = $(k); if (e) e.innerHTML = ''; });
+  if ($('qMeta')) $('qMeta').textContent = '';
+  syncHero();
+  if (q) q.focus();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    syncHero();
+    const m = $('btnMenu'), n = $('btnNew');
+    if (m) m.onclick = () => openSheetCard('moreSheet');
+    if (n) n.onclick = () => newSession();
   } catch (e) { }
 });

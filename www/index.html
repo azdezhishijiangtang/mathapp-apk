@@ -14,12 +14,9 @@
 </head>
 <body>
 <header class="bar">
-  <div class="brand">∑ 数学答疑<span class="dot"></span><small id="engineHint">验证引擎检测中…</small></div>
-  <div class="acts">
-    <button class="ghost" id="btnHist">记录</button>
-    <button class="ghost" id="btnMore">更多</button>
-    <button class="ghost" id="btnCfg">设置</button>
-  </div>
+  <button class="icon" id="btnMenu" aria-label="菜单">☰</button>
+  <div class="brand">∑ 数学答疑<span class="dot" id="heroDot"></span><small class="hide" id="engineHint">验证引擎检测中…</small></div>
+  <button class="icon" id="btnNew" aria-label="新对话">＋</button>
 </header>
 
 <main>
@@ -48,6 +45,11 @@
       <button class="primary sm" id="btnDueStart">开始复习</button>
     </div>
   </section>
+
+  <div class="hero" id="hero">
+    <h1>今天想解决哪道题？</h1>
+    <p>粘贴题目、拍照识别或手打公式。答案会标出本机验证的结果：<br>哪些断言被证明、哪些只是没找到反例。</p>
+  </div>
 
   <section class="ask">
     <textarea id="q" rows="4" placeholder="粘贴或输入题目（支持 LaTeX）：&#10;例如 设 f(x)=(1+sin x)/(π+2x)，证明 f 在 [0,π/2] 上的最小值为 1/π"></textarea>
@@ -102,6 +104,7 @@
 
   <div id="colR">
   <section id="answer" class="card hide">
+    <div class="sect">解答</div>
     <div class="head">
       <span class="tag" id="modelTag">—</span>
       <span class="meta" id="metaTag"></span>
@@ -274,6 +277,7 @@
 
 <section class="sheet hide" id="moreSheet">
   <div class="sheetHead"><b>更多工具</b><button class="ghost xs" data-close="moreSheet">关闭</button></div>
+  <div class="row"><button id="btnHist">解题记录</button><button id="btnCfg">设置</button><button class="ghost" id="btnMore">更多工具</button></div>
   <div class="row"><button class="primary" id="btnMarket2">功能市场</button></div>
   <div class="row"><button id="btnArchive">学习档案</button><button id="btnPortrait">认知画像</button><button id="btnCoach">学习教练</button></div>
   <div class="row"><button id="btnBatch">整页批改</button><button id="btnWeek">学习周报</button><button id="btnG3">立体画板</button></div>

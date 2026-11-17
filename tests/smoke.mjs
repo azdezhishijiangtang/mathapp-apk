@@ -118,6 +118,14 @@ ok('输入框不小于 16px', /input:not\(\[type=checkbox\]\),select,textarea\{f
 ok('提示条在面板之上', /\.toast\{z-index:90\}/.test(css));
 ok('正文限宽 72ch', /max-width:72ch/.test(css));
 
+// v2.5 界面清晰度：顶栏只有两个图标、空状态问候、单列居中
+ok('顶栏菜单按钮存在', !!w.document.getElementById('btnMenu'));
+ok('顶栏新对话按钮存在', !!w.document.getElementById('btnNew'));
+ok('顶栏不再堆三个文字按钮', !w.document.querySelector('header.bar #btnCfg'));
+ok('空状态问候存在', !!w.document.getElementById('hero'));
+ok('原入口搬进更多工具', !!w.document.querySelector('#moreSheet #btnHist') && !!w.document.querySelector('#moreSheet #btnCfg'));
+ok('单列居中样式已写入', /main\{display:block!important;max-width:860px/.test(css));
+
 try { w.close(); } catch (e) {}
 if (fail.length) { console.log('\n失败 ' + fail.length + ' 项'); process.exit(1); }
 console.log('\n全部通过');
