@@ -31,6 +31,17 @@
     <p class="tip" id="obEngines"></p>
   </section>
 
+  <section id="engCard" class="card onboard hide">
+    <b>本地验证引擎（七合一，离线）</b>
+    <p class="tip" id="engTip">还没装引擎包。装好后解题会自动用 sympy / z3 / Arb / PARI / numpy / CP-SAT / cvc5 / Gröbner 复核每一步断言，不需要联网。</p>
+    <div class="row">
+      <button class="primary" id="btnEngInstall">选择引擎包安装</button>
+      <button class="ghost xs" id="btnEngStart">启动 / 重试</button>
+      <button class="ghost xs" id="btnEngLog">看日志</button>
+    </div>
+    <p class="tip xs" id="engProg"></p>
+  </section>
+
   <section class="ask">
     <textarea id="q" rows="4" placeholder="粘贴或输入题目（支持 LaTeX）：&#10;例如 设 f(x)=(1+sin x)/(π+2x)，证明 f 在 [0,π/2] 上的最小值为 1/π"></textarea>
     <details id="kbdWrap" class="card kbd">

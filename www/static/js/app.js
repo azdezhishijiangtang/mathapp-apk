@@ -683,6 +683,51 @@ function bind() {
 
 /* 启动：等所有脚本就位后再绑定，避免与 extra.js 的加载顺序耦合 */
 let __booted = false;
+
+function bindEngine() {
+  if (!(window.isNativeApp && window.isNativeApp())) return;
+  const card = $('engCard');
+  if (!card) return;
+  const tip = $('engTip'), prog = $('engProg');
+  const setProg = (t) => { if (prog) prog.textContent = t || ''; };
+  const refresh = () => {
+    if (typeof window.engineStatus !== 'function') return;
+    window.engineStatus().then((st) => {
+      if (!st) return;
+      if (st.ready) { card.classList.add('hide'); return; }
+      card.classList.remove('hide');
+      if (st.installed) {
+        tip.textContent = st.starting ? '引擎正在启动…' : '引擎包已安装，但服务还没起来。点「启动 / 重试」，或看日志。';
+      } else {
+        tip.textContent = '还没装引擎包。点「选择引擎包安装」，选 mathapp-engine-pack.tar.gz（约 212 MB），装完自动启动，之后离线可用。';
+      }
+    }).catch(() => { card.classList.remove('hide'); });
+  };
+  const bIns = $('btnEngInstall'), bStart = $('btnEngStart'), bLog = $('btnEngLog');
+  if (bIns) bIns.onclick = () => {
+    setProg('准备选择文件…');
+    const off = window.onInstallProgress ? window.onInstallProgress((d) => {
+      setProg((d.msg || d.phase || '') + (d.pct && d.pct < 100 ? '（' + d.pct + '%）' : ''));
+    }) : () => {};
+    bIns.disabled = true;
+    window.engineInstall().then((r) => {
+      setProg(r && r.ready ? '引擎已就绪 ✅' : '已安装，正在启动…');
+      setTimeout(() => { if (window.lbReset) window.lbReset(); refresh(); }, 1500);
+    }).catch((e) => setProg('安装失败：' + (e && (e.message || e))))
+      .finally(() => { bIns.disabled = false; off(); });
+  };
+  if (bStart) bStart.onclick = () => {
+    setProg('正在启动…');
+    window.engineStart().then(() => { if (window.lbReset) window.lbReset(); refresh(); })
+      .catch((e) => setProg('启动失败：' + (e && (e.message || e))));
+  };
+  if (bLog) bLog.onclick = () => {
+    window.engineLog().then((r) => { setProg(''); alert('后端日志尾部：\n\n' + ((r && r.text) || '(空)')); });
+  };
+  refresh();
+  setInterval(refresh, 8000);
+}
+
 function bootUI() {
   if (__booted) return;
   __booted = true;
@@ -695,6 +740,7 @@ function bootUI() {
     updateQMeta();
     autoGrow();
     if (typeof updateDueBadge === 'function') updateDueBadge();
+    bindEngine();
     if (typeof renderChat === 'function') renderChat();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
   } catch (e) {

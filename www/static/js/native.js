@@ -86,4 +86,40 @@
       return probe();
     }).catch(function () { starting = false; return probe(); });
   };
+
+  /* ---------- 引擎包（rootfs）安装与状态 ---------- */
+  function be() { return (cap && cap.Plugins && cap.Plugins.LocalBackend) || null; }
+
+  window.engineStatus = function () {
+    var b = be();
+    if (!isNative || !b) return Promise.resolve({ installed: true, ready: false, native: false });
+    return b.status();
+  };
+
+  /* 监听安装进度，回调 {phase,pct,msg}；返回取消函数 */
+  window.onInstallProgress = function (cb) {
+    var b = be();
+    if (!isNative || !b || !b.addListener) return function () {};
+    var h = b.addListener('installProgress', function (d) { try { cb(d || {}); } catch (e) { } });
+    return function () { Promise.resolve(h).then(function (h2) { if (h2 && h2.remove) h2.remove(); }); };
+  };
+
+  /* 打开系统文件选择器挑 rootfs.tar.gz → 拷贝 → 解压 → 启动 */
+  window.engineInstall = function () {
+    var b = be();
+    if (!isNative || !b) return Promise.reject(new Error('仅 APK 内可用'));
+    return b.pickAndInstall();
+  };
+
+  window.engineStart = function () {
+    var b = be();
+    if (!isNative || !b) return Promise.reject(new Error('仅 APK 内可用'));
+    return b.start().then(function (r) { lbUp = null; return r; });
+  };
+
+  window.engineLog = function () {
+    var b = be();
+    if (!isNative || !b) return Promise.resolve({ text: '(浏览器模式无本地后端日志)' });
+    return b.log();
+  };
 })();

@@ -1,12 +1,18 @@
 package com.azdezhishi.mathapp;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
+
+import androidx.activity.result.ActivityResult;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -117,6 +123,73 @@ public class LocalBackendPlugin extends Plugin {
         }).start();
     }
 
+    /** 打开系统文件选择器挑 rootfs.tar.gz，拷进私有目录后解压并直接启动（无需存储权限） */
+    @PluginMethod
+    public void pickAndInstall(PluginCall call) {
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("*/*");
+        startActivityForResult(call, i, "onPackPicked");
+    }
+
+    @ActivityCallback
+    private void onPackPicked(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null
+                || result.getData().getData() == null) {
+            call.reject("已取消");
+            return;
+        }
+        Uri uri = result.getData().getData();
+        final PluginCall c = call;
+        new Thread(() -> {
+            try {
+                File tmp = new File(getContext().getFilesDir(), "pack-download.tar.gz");
+                long total = copyUri(uri, tmp);
+                notify("copy", 100, "已选择引擎包（" + (total / 1048576) + " MB）");
+                extract(tmp);
+                tmp.delete();
+                boolean started = false;
+                try { spawn(rootfsReady()); } catch (Exception e) { /* 启动失败也算安装成功 */ }
+                for (int i = 0; i < 40; i++) {
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                    if (health(400)) { started = true; break; }
+                }
+                notify("done", 100, started ? "引擎已就绪" : "已安装，引擎还在启动");
+                JSObject r = new JSObject();
+                r.put("installed", rootfsReady() != null);
+                r.put("ready", started);
+                c.resolve(r);
+            } catch (Exception e) {
+                c.reject("安装失败：" + e.getMessage());
+            }
+        }).start();
+    }
+
+    private long copyUri(Uri uri, File dst) throws IOException {
+        long total = 0, len = -1;
+        try (InputStream in = getContext().getContentResolver().openInputStream(uri);
+             FileOutputStream out = new FileOutputStream(dst)) {
+            if (in == null) throw new IOException("无法读取所选文件");
+            byte[] buf = new byte[1 << 16];
+            int n; long lastPct = -1;
+            while ((n = in.read(buf)) > 0) {
+                out.write(buf, 0, n); total += n;
+                long pct = total / (20L * 1048576L);   // 每 20MB 报一次
+                if (pct != lastPct) { lastPct = pct; notify("copy", (int) Math.min(99, pct * 5), "拷贝中 " + (total / 1048576) + " MB"); }
+            }
+        }
+        return total;
+    }
+
+    private void notify(String phase, int pct, String msg) {
+        JSObject o = new JSObject();
+        o.put("phase", phase);
+        o.put("pct", pct);
+        o.put("msg", msg);
+        notifyListeners("installProgress", o);
+    }
+
     /* ---------- 内部实现 ---------- */
 
     private JSObject ok(boolean ready, boolean started) {
@@ -190,7 +263,9 @@ public class LocalBackendPlugin extends Plugin {
                              new java.io.FileInputStream(tarGz), 1 << 20)))) {
             TarArchiveEntry e;
             byte[] buf = new byte[1 << 16];
+            int seen = 0;
             while ((e = tin.getNextTarEntry()) != null) {
+                if (++seen % 4000 == 0) notify("extract", 100, "解压中（" + seen + " 项）");
                 File out = new File(d, e.getName());
                 if (!out.getCanonicalPath().startsWith(d.getCanonicalPath())) throw new IOException("非法路径");
                 if (e.isDirectory()) { out.mkdirs(); continue; }
@@ -203,6 +278,7 @@ public class LocalBackendPlugin extends Plugin {
             }
         }
         new File(d, MARK).createNewFile();
+        notify("extract", 100, "解压完成");
     }
 
     private void deleteRec(File f) {
