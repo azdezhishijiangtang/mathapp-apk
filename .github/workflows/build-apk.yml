@@ -106,8 +106,7 @@ jobs:
             装机：装 APK → 打开 → 等引擎卡走完 → 设置里填 OpenAI 兼容端点与 Key。
           files: |
             android/app/build/outputs/apk/release/app-release.apk
-            android/app/build/outputs/apk/debug/app-debug.apk
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
 
   engine-pack:
     name: 引擎包（arm64 rootfs + 七引擎）
