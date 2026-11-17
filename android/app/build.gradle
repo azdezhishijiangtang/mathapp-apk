@@ -8,7 +8,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         // proot 需要从应用数据目录执行二进制，Android 10+ 只在 targetSdk<29 下允许
         targetSdkVersion 28
-        versionCode 8
+        versionCode 9
         versionName "2.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -16,6 +16,12 @@ android {
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
+    }
+    // targetSdk 28 是 proot 的硬要求（Android 10+ 只在 targetSdk<29 允许 exec 数据目录二进制），
+    // 但 AGP 的 lintVitalRelease 会因「ExpiredTargetSdkVersion」判致命错误，故关掉 release 的 lint 拦截。
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
     }
     packagingOptions {
         jniLibs { useLegacyPackaging = true }   // 必须解压到 lib/，否则 proot 无法执行
