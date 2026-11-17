@@ -5,13 +5,15 @@
   "description": "AI 数学答疑（离线验证引擎 + BYOK 模型）",
   "scripts": {
     "sync": "cap sync android",
-    "open": "cap open android"
+    "open": "cap open android",
+    "test": "node tests/smoke.mjs"
   },
   "dependencies": {
     "@capacitor/core": "8.6.2",
     "@capacitor/android": "8.6.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.6.2"
+    "@capacitor/cli": "8.6.2",
+    "jsdom": "^31.0.1"
   }
 }

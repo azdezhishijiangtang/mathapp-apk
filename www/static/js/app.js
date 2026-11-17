@@ -26,10 +26,31 @@ const V_MAP = {
   error: ['b-unk', '验证出错'], skipped: ['b-unk', '跳过'], info: ['b-unk', '信息'],
 };
 
+const GAP_TIP = {
+  identity: '把两边都展开成多项式，sympy 能直接判定',
+  ineq: '写清自变量区间（例如 "x":[0,1.5708]）；单变量会走 Arb 200 位，简单的三角界还能被 cvc5 严格证明',
+  value: '给出精确值（1/3、pi/6 这种），别写近似小数',
+  nt: '把区间收窄到有限范围，或改写成 CP-SAT 能判的整数约束（可到 1e9）',
+  forall_int: '区间写小一点，超过 200 万点会自动转 CP-SAT；简单命题它能直接证明',
+  exists_int: '给出范围，CP-SAT 会去找见证；找不到就是「大概率不存在」',
+  mod: '补上模数与变量范围，穷举判定需要有限区间',
+  recurrence: '把初值和递推式都写全（前项用 a_prev 表示）',
+  geom: '先建系写成坐标多项式：hyps 放各点约束（=0），goal 放待证多项式；非退化条件放 nondeg',
+};
+function gapAdvice(x) {
+  const k = (x.kind || '').toLowerCase();
+  const base = GAP_TIP[k] || '把这一步拆成更小的等式/不等式再交上来';
+  if (x.status === 'unknown') return '未能判定：' + base;
+  if (x.status === 'no_counterexample_found') return '只拿到抽样证据：' + base;
+  if (x.status === 'error') return '没解析成功：检查 LaTeX 写法（\\frac{a}{b}，乘号用 \\cdot 或空格）';
+  return base;
+}
+
 function renderVerify(d) {
   if (!d) return;
   $('verify').classList.remove('hide');
-  $('verifyList').innerHTML = (d.results || []).map((x) => {
+  const rs = d.results || [];
+  $('verifyList').innerHTML = rs.map((x) => {
     const [cls, label] = V_MAP[x.status] || ['b-unk', x.status];
     const det = [x.detail, x.min_enclosure ? '最小包络 ' + x.min_enclosure : '', x.at ? '@' + x.at : '',
       x.point ? '反例 ' + JSON.stringify(x.point) : '', x.engine ? '[' + x.engine + ']' : '',
@@ -37,9 +58,64 @@ function renderVerify(d) {
     return `<div class="vitem"><div class="vhead"><span class="badge ${cls}">${label}</span>
       <span class="vclaim">${esc(x.claim || '')}</span></div><div class="vdetail">${esc(det)}</div></div>`;
   }).join('') || '<div class="vdetail">无断言</div>';
+
   const s = d.summary || {};
-  $('verifySum').textContent = `${s.proved || 0}/${s.total || 0} 通过 · 证据覆盖率 ${Math.round((d.coverage || 0) * 100)}%` +
-    (s.refuted ? ` · ${s.refuted} 条被推翻` : '');
+  const total = s.total || 0, proved = s.proved || 0, refuted = s.refuted || 0;
+  const rest = Math.max(0, total - proved - refuted);
+  const pct = (n) => (total ? Math.round((n * 100) / total) : 0);
+  const bar = $('verifyBar');
+  if (bar && total) {
+    bar.classList.remove('hide');
+    bar.innerHTML = '<div class="vbarIn">'
+      + '<i class="ok" style="width:' + pct(proved) + '%"></i>'
+      + '<i class="no" style="width:' + pct(rest) + '%"></i>'
+      + '<i class="bad" style="width:' + pct(refuted) + '%"></i></div>'
+      + '<div class="meta">严格证明 ' + proved + ' · 只到抽样 ' + rest + ' · 被推翻 ' + refuted
+      + ' · 证据覆盖率 ' + Math.round((d.coverage || 0) * 100) + '%</div>';
+  }
+  $('verifySum').textContent = proved + '/' + total + ' 通过 · 覆盖率 '
+    + Math.round((d.coverage || 0) * 100) + '%' + (refuted ? ' · ' + refuted + ' 条被推翻' : '');
+
+  const gaps = rs.filter((x) => x.status !== 'proved' && x.status !== 'refuted');
+  const box = $('verifyGap');
+  if (box) {
+    if (!gaps.length) { box.classList.add('hide'); box.innerHTML = ''; }
+    else {
+      box.classList.remove('hide');
+      box.innerHTML = '<b>还差 ' + gaps.length + ' 条没被严格证明（下面是可以怎么改）</b>'
+        + gaps.slice(0, 6).map((x) => '<div class="gapitem"><span class="vclaim">'
+          + esc((x.claim || '').slice(0, 90)) + '</span><div class="vdetail">' + esc(gapAdvice(x)) + '</div></div>').join('');
+    }
+  }
+}
+
+/** 两个模型答案是否一致 —— 不一致就明确告诉用户「这题不可靠」 */
+function renderCross(c) {
+  const el = $('crossRow');
+  if (!el) return;
+  if (!c) { el.classList.add('hide'); el.innerHTML = ''; return; }
+  el.classList.remove('hide');
+  if (c.err) {
+    el.className = 'cross warn';
+    el.innerHTML = '<b>交叉复核没跑成</b><div class="meta">' + esc(c.err) + '（不影响上面的结果）</div>';
+    return;
+  }
+  if (c.same) {
+    el.className = 'cross ok';
+    el.innerHTML = '<b>两个模型答案一致 ✓</b><div class="meta">' + esc(c.m1) + ' 与 ' + esc(c.m2)
+      + ' 都给出 ' + esc(c.a1) + '</div>';
+    return;
+  }
+  if (!c.a1 || !c.a2) {
+    el.className = 'cross warn';
+    el.innerHTML = '<b>没法和第二模型对答案</b><div class="meta">至少一方没写出 \\boxed{}，'
+      + (c.a1 ? '主模型 ' + esc(c.a1) + '；' : '') + (c.a2 ? '副模型 ' + esc(c.a2) : '') + '</div>';
+    return;
+  }
+  el.className = 'cross bad';
+  el.innerHTML = '<b>⚠ 两个模型答案不一致，这题不可靠</b><div class="meta">'
+    + esc(c.m1) + ' → ' + esc(c.a1) + ' ／ ' + esc(c.m2) + ' → ' + esc(c.a2)
+    + '。建议看「问法 / 版本树」里再解一版，或人工判断。</div>';
 }
 
 async function solve(problem, opts = {}) {
@@ -54,6 +130,10 @@ async function solve(problem, opts = {}) {
   note('思考中…');
   S.cur = null;
 
+  const __lvl = (($('level') && $('level').value) || 'std');
+  const useModel = (__lvl === 'cheap' && S.cfg.modelCheap) ? S.cfg.modelCheap : S.cfg.model;
+  renderCross(null);
+
   let messages = [
     { role: 'system', content: SOLVE_SYS },
     { role: 'user', content: problem },
@@ -63,6 +143,7 @@ async function solve(problem, opts = {}) {
   try {
     while (true) {
       r = await callLLMRobust(messages, {
+        model: useModel,
         onText: (t) => { $('answerBody').innerHTML = render(t); },
         onThink: (t) => {
           $('thinkWrap').classList.remove('hide');
@@ -71,7 +152,7 @@ async function solve(problem, opts = {}) {
         },
         onNote: (m) => note(m),
       });
-      showAnswer(S.cfg.model, r.content, r.reasoning);
+      showAnswer(useModel, r.content, r.reasoning);
       note(`${r.secs.toFixed(0)}s · 入 ${fmtTok(r.usage.prompt_tokens)} / 出 ${fmtTok(r.usage.completion_tokens)} · ${r.finish || '-'}` +
         (r.usage.credit !== undefined ? ` · ${r.usage.credit} 积分` : ''));
 
@@ -114,12 +195,27 @@ async function solve(problem, opts = {}) {
     btn.disabled = false; $('btnStop').classList.add('hide'); S.abort = null;
   }
 
+  let cross = null;
+  if (r && r.content && S.cfg.model2 && S.cfg.model2 !== useModel) {
+    note('交叉复核：' + S.cfg.model2 + ' 独立再解一遍…');
+    try {
+      const r2 = await callLLM([{ role: 'system', content: SOLVE_SYS }, { role: 'user', content: problem }],
+        { model: S.cfg.model2, maxTokens: Math.min(S.cfg.maxTokens, 20000), stream: false, thinking: false });
+      const a1 = boxedOf(r.content), a2 = boxedOf(r2.content);
+      cross = { m1: useModel, m2: S.cfg.model2, a1, a2, same: !!a1 && !!a2 && normAns(a1) === normAns(a2) };
+    } catch (e) {
+      cross = { m1: useModel, m2: S.cfg.model2, err: String((e && e.message) || e).slice(0, 140) };
+    }
+    renderCross(cross);
+  }
+
   if (r && r.content) {
     let item = into ? S.items.find((x) => x.id === into) : null;
     const qid = opts.qid || (item && typeof Tree !== 'undefined' ? Tree.qId(item) : 'q0');
     const rec = {
       id: 'b' + Date.now(), answer: r.content, think: r.reasoning || '',
-      model: S.cfg.model, verify: verifyResult, claims, rounds: round, at: Date.now(), qid,
+      model: useModel, verify: verifyResult, claims, rounds: round, at: Date.now(), qid,
+      ...(cross ? { cross } : {}),
     };
     if (item) {
       Branch.push(item, rec);
@@ -408,6 +504,9 @@ function openCfg() {
   $('cfgBase').value = S.cfg.base; $('cfgKey').value = S.cfg.key;
   $('cfgModel').value = S.cfg.model; $('cfgMax').value = S.cfg.maxTokens;
   $('cfgVision').value = S.cfg.visionModel || '';
+  if ($('cfgModel2')) $('cfgModel2').value = S.cfg.model2 || '';
+  if ($('cfgModelCheap')) $('cfgModelCheap').value = S.cfg.modelCheap || '';
+  if ($('cfgCapDaily')) $('cfgCapDaily').value = S.cfg.capDaily || 0;
   $('cfgTemp').value = S.cfg.temp; $('cfgVerify').checked = S.cfg.autoVerify;
   $('cfgRetry').checked = S.cfg.autoRetry;
   $('cfgTestOut').textContent = '';
@@ -420,6 +519,9 @@ function readCfgFromForm() {
     key: $('cfgKey').value.trim(),
     model: $('cfgModel').value.trim(),
     visionModel: $('cfgVision').value.trim(),
+    model2: (($('cfgModel2') && $('cfgModel2').value) || '').trim(),
+    modelCheap: (($('cfgModelCheap') && $('cfgModelCheap').value) || '').trim(),
+    capDaily: Math.max(0, +((($('cfgCapDaily') && $('cfgCapDaily').value) || 0)) || 0),
     maxTokens: +$('cfgMax').value || 24000,
     temp: (() => { const v = parseFloat($('cfgTemp').value); return isNaN(v) ? 0.6 : v; })(),
     autoVerify: $('cfgVerify').checked,
@@ -510,8 +612,12 @@ function renderHist() {
       if (act === 'open') { openItem(item); }
       if (act === 'fav') { item.fav = !item.fav; save(); renderHist(); }
       if (act === 'del') {
-        if (!confirm('删除这条记录？')) return;
-        S.items = S.items.filter((x) => x.id !== id); save(); renderHist();
+        const idx = S.items.indexOf(item);
+        S.items = S.items.filter((x) => x.id !== id); save(); renderHist(); syncDueBar();
+        toast('已删除 1 条记录', '撤销', () => {
+          if (idx >= 0) S.items.splice(idx, 0, item); else S.items.unshift(item);
+          save(); renderHist(); syncDueBar(); toast('已恢复这条记录');
+        }, 6000);
       }
     });
   });
@@ -808,3 +914,44 @@ function bootUI() {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootUI);
 else bootUI();
+
+/* ===== v2.2：提示条 / 今日复习入口 ===== */
+let __toastT = null;
+function toast(msg, action, fn, ms) {
+  const el = $('toast');
+  if (!el) return;
+  el.innerHTML = '<span>' + esc(msg) + '</span>' + (action ? '<button id="toastAct">' + esc(action) + '</button>' : '');
+  el.classList.remove('hide');
+  const b = $('toastAct');
+  if (b) b.onclick = () => { el.classList.add('hide'); try { fn && fn(); } catch (e) {} };
+  clearTimeout(__toastT);
+  __toastT = setTimeout(() => el.classList.add('hide'), ms || 4000);
+}
+
+/** 首页「今天有几道错题到期」——复习排程的唯一入口 */
+function syncDueBar() {
+  const bar = $('dueBar');
+  if (!bar || typeof S === 'undefined' || !S.items) return;
+  let due = 0, all = 0;
+  try {
+    due = (typeof dueList === 'function') ? dueList().length : 0;
+  } catch (e) { due = 0; }
+  all = S.items.filter((x) => x.wrong).length;
+  const n = $('dueN'), a = $('dueAll');
+  if (n) n.textContent = due;
+  if (a) a.textContent = all ? '（共 ' + all + ' 道错题）' : '';
+  bar.classList.toggle('hide', due === 0);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const b = $('btnDueStart');
+    if (b) b.onclick = () => { if (typeof openReview === 'function') openReview(); };
+    syncDueBar();
+    setInterval(syncDueBar, 20000);
+    if (typeof updateDueBadge === 'function') {
+      const _u = updateDueBadge;
+      updateDueBadge = function () { const r = _u.apply(this, arguments); try { syncDueBar(); } catch (e) {} return r; };
+    }
+  } catch (e) {}
+});

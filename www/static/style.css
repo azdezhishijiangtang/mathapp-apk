@@ -191,3 +191,34 @@ pre.code{background:rgba(255,255,255,.04);border:1px solid var(--line);border-ra
 .bub.ai{background:#0f1620;border:1px solid #23303f}
 .bwho{font-size:11px;color:#7f93aa;margin-bottom:3px}
 .bub .body{font-size:14px;line-height:1.62}
+
+/* ===== 平板 / 桌面：左题面，右答案（v2.2） ===== */
+#colR{display:block}
+#dueBar{border-color:#3fb95055}
+#dueBar b{color:#7ee787;font-size:16px}
+@media (min-width:900px){
+  body{max-width:1180px}
+  main{display:grid;grid-template-columns:minmax(330px,42%) minmax(0,1fr);column-gap:14px;align-items:start}
+  #onboard,#engCard,#dueBar,footer.foot2{grid-column:1/-1}
+  .ask{grid-column:1;position:sticky;top:58px}
+  #colR{grid-column:2;display:flex;flex-direction:column;gap:12px;min-width:0}
+  #colR>section{margin-bottom:0}
+}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom));
+  z-index:99;background:#1c2430;border:1px solid var(--line);border-radius:999px;padding:10px 16px;
+  display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px #0008;font-size:14px;max-width:92vw}
+.toast button{background:transparent;border:0;color:#79c0ff;font-weight:600;padding:2px 4px}
+
+/* ===== v2.2：验证覆盖率条 / 缺口清单 / 交叉复核 ===== */
+.vbar{margin:6px 0 10px}
+.vbarIn{display:flex;height:8px;border-radius:999px;overflow:hidden;background:#0f1620;border:1px solid var(--line)}
+.vbarIn i{display:block;height:100%}
+.vbarIn i.ok{background:var(--acc)} .vbarIn i.no{background:#5a6b7d} .vbarIn i.bad{background:var(--bad)}
+.gap{margin:10px 0 8px;border-left:2px solid var(--warn);padding-left:10px;font-size:13px}
+.gap b{color:var(--warn);font-weight:600}
+.gapitem{margin-top:6px}
+.gapitem .vclaim{color:var(--dim);font-size:12.5px}
+.cross{margin:8px 0;border-radius:10px;padding:8px 10px;font-size:13px;border:1px solid var(--line)}
+.cross.ok{background:#3fb95018;border-color:#3fb95055}.cross.ok b{color:#7ee787}
+.cross.warn{background:#d2992218;border-color:#d2992255}.cross.warn b{color:var(--warn)}
+.cross.bad{background:#f8514918;border-color:#f8514955}.cross.bad b{color:var(--bad)}

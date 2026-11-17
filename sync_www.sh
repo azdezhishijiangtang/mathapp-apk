@@ -12,3 +12,9 @@ for x in "$SRC"/*; do
   case "$b" in index.html|manifest.webmanifest|sw.js) ;; *) cp -a "$x" "$DST/static/" ;; esac
 done
 echo "www: $(du -sh "$DST" | cut -f1)"
+# 同步后立刻跑冒烟测试，失败就不许提交/出包
+if [ -f node_modules/jsdom/package.json ]; then
+  node tests/smoke.mjs || { echo "冒烟测试没过，先修再出包"; exit 1; }
+else
+  echo "（跳过冒烟测试：先 npm install 才有 jsdom）"
+fi

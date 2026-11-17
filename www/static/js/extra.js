@@ -35,6 +35,12 @@ function renderCost() {
 /** 包一层 callLLM，把每次调用记进成本面板 */
 const _callLLM = callLLM;
 callLLM = async function (messages, opt = {}) {
+  const cap = Number(S.cfg.capDaily || 0);
+  if (cap > 0 && Number(S.cost.credit || 0) >= cap) {
+    const e = new Error('今日已用 ' + Number(S.cost.credit || 0).toFixed(1) + ' 积分，已达单日上限 ' + cap + '（设置里可调高，或明天再来）');
+    e.status = 'budget';
+    throw e;
+  }
   const r = await _callLLM(messages, opt);
   try {
     const u = r.usage || {};

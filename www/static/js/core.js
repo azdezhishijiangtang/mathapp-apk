@@ -7,6 +7,7 @@ const LS_OLD = 'mathapp.v1';
 const S = {
   cfg: {
     base: '', key: '', model: '', maxTokens: 24000, temp: 0.6,
+    model2: '', modelCheap: '', capDaily: 0,
     autoVerify: true, autoRetry: true, visionModel: '', vcap: {}
   },
   items: [],          // 记录（含收藏）
@@ -193,6 +194,7 @@ function envLine() {
 /** 把错误翻成「人话 + 下一步动作」 */
 function classifyErr(e) {
   const st = e && (e.status || e.statusCode);
+  if (st === 'budget' || /单日.*上限|预算上限/.test(String((e && e.message) || ''))) return { text: String((e && e.message) || '已到单日上限'), act: 'cfg' };
   const msg = String((e && e.message) || e || '').slice(0, 300);
   if (st === 401 || /401|invalid.*(key|api)|unauthor|认证失败/i.test(msg)) return { text: 'API Key 不对或没有权限', act: 'cfg' };
   if (st === 402 || /insufficient|balance|余额|欠费/i.test(msg)) return { text: '账户余额不足', act: 'cfg' };
@@ -440,4 +442,38 @@ function parseJsonLoose(raw) {
   const i = t.indexOf('{'), j = t.lastIndexOf('}');
   if (i < 0 || j <= i) return null;
   try { return JSON.parse(t.slice(i, j + 1).replace(/,\s*([}\]])/g, '$1')); } catch (e) { return null; }
+}
+
+/** 从一段作答里抽出最终答案：优先 \\boxed{…}（支持嵌套花括号），退化用「答案是 …」 */
+function boxedOf(text) {
+  const t = String(text || '');
+  let best = '', i = t.indexOf('\\boxed');
+  while (i >= 0) {
+    const j = t.indexOf('{', i);
+    if (j < 0) break;
+    let depth = 0, k = j;
+    for (; k < t.length; k++) {
+      const c = t[k];
+      if (c === '\\') { k++; continue; }
+      if (c === '{') depth++;
+      else if (c === '}') { depth--; if (depth === 0) break; }
+    }
+    const v = t.slice(j + 1, k).trim();
+    if (v) best = v;
+    i = t.indexOf('\\boxed', k);
+  }
+  if (best) return best;
+  const m = t.match(/(?:答案|故|因此|所以)[是为：:\s]*\$?([^\n。;]{1,60})/);
+  return m ? m[1].replace(/\$/g, '').trim() : '';
+}
+
+/** 答案归一化：去掉排版噪音再比较（宽松，只为判「一致/不一致」） */
+function normAns(x) {
+  return String(x || '')
+    .replace(/\\left|\\right|\\,|\\!|\\;|\\ |\s+/g, '')
+    .replace(/\$|\\text\{[^{}]*\}|\\mathrm\{[^{}]*\}/g, '')
+    .replace(/\\[dt]?frac/g, '\\frac')
+    .replace(/[−–—]/g, '-')
+    .replace(/^答案[是为：:]*/, '')
+    .toLowerCase();
 }

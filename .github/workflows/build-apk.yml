@@ -51,6 +51,7 @@ jobs:
       - name: 安装依赖并同步原生工程
         run: |
           npm ci || npm install
+          npm test
           npx cap sync android
 
       - name: 编译 APK
