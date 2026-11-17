@@ -111,6 +111,13 @@ ok('快照列表可用', Array.isArray(sl));
 await X.renderDiag();
 ok('诊断面板渲染出条目', w.document.querySelectorAll('#diagBody .drow').length >= 3);
 
+// v2.4 排版：面板可滚 / 输入框 ≥16px / 提示条层级 / 正文限宽（读样式表做静态断言）
+const css = fs.readFileSync(path.join(WEB, 'static/style.css'), 'utf8');
+ok('长面板可滚动', /section\.sheet\{[^}]*overflow-y:auto/.test(css));
+ok('输入框不小于 16px', /input:not\(\[type=checkbox\]\),select,textarea\{font-size:16px\}/.test(css));
+ok('提示条在面板之上', /\.toast\{z-index:90\}/.test(css));
+ok('正文限宽 72ch', /max-width:72ch/.test(css));
+
 try { w.close(); } catch (e) {}
 if (fail.length) { console.log('\n失败 ' + fail.length + ' 项'); process.exit(1); }
 console.log('\n全部通过');

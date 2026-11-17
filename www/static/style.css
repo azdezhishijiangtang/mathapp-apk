@@ -224,7 +224,58 @@ pre.code{background:rgba(255,255,255,.04);border:1px solid var(--line);border-ra
 .cross.bad{background:#f8514918;border-color:#f8514955}.cross.bad b{color:var(--bad)}
 
 /* v2.3 诊断面板 */
-.drow{display:flex;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid #1e2635}
+.drow{display:flex;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}
 .dk{flex:0 0 92px;color:var(--dim)}
 .dv{flex:1;min-width:0;word-break:break-all}
-.der{font-size:12px;color:#ffb4b4;padding:3px 0;word-break:break-all}
+.der{font-size:12px;color:var(--bad);padding:3px 0;word-break:break-all}
+
+/* ---------- v2.4 排版与可用性修复 ---------- */
+
+/* 1) 所有面板都能滚：section.sheet 之前没有 max-height / overflow，
+      市场（16 项）、诊断（含日志）、档案、画像这些长面板会被屏幕直接切掉。 */
+section.sheet{
+  display:block;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:max(12px,env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom));
+}
+section.sheet > *{max-width:820px;margin-left:auto;margin-right:auto}
+
+/* 2) 提示条永远盖在面板之上 */
+.toast{z-index:90}
+
+/* 3) 输入框一律 ≥16px：WebView 里小于 16px 的输入框一聚焦就会自动放大，页面跟着跳 */
+.ask textarea,input:not([type=checkbox]),select,textarea{font-size:16px}
+
+/* 4) 触控目标别小于 36px（单手在平板上点关闭按钮很容易点空） */
+button.xs{min-height:36px;padding:6px 10px;font-size:12.5px}
+.brchip,.chip{min-height:32px}
+
+/* 5) 中文字体栈 + 行距：不同 ROM 默认中文字形与行高差很多，显式指定 */
+html,body{font-family:-apple-system,system-ui,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif}
+.body,.bub,.qbox{line-height:1.72}
+.body{overflow-wrap:anywhere;word-break:normal}   /* 只断超长串，不再切碎行内公式 */
+
+/* 6) 公式块自己横向滚，不撑破页面 */
+.body .katex-display,pre.code{overflow-x:auto;overflow-y:hidden;max-width:100%}
+pre.code{max-height:42vh;overflow:auto}
+
+/* 7) 桌面 / 平板横屏：正文限宽，一行别超过 72 个字符 */
+@media (min-width:760px){
+  .body{max-width:72ch}
+  .body .katex-display{max-width:none}
+}
+
+/* 8) 顶栏去掉 backdrop-filter：WebView 里长列表滚动时会掉帧 */
+header.bar{backdrop-filter:none;background:var(--bg)}
+.dv{overflow-wrap:anywhere}
+
+/* 9) 浅色主题补齐（之前只有变量和 header 换了，think/tag/气泡/日志仍是深色底配色） */
+@media (prefers-color-scheme:light){
+  .think{color:#5b54a8;border-left-color:#8a82e0}
+  .think summary{color:#4a4494}
+  .tag{background:#1f6fdd14;border-color:#2f81f755;color:#0a4a9e}
+  .bub.me{background:#1f6feb1a;border-color:#1f6feb44}
+  .sheet{background:#0006}
+  .body code,.think pre{background:var(--panel2);color:var(--fg)}
+  .toast{background:#1f2328ee}
+  .btn,.primary{color:#fff}
+}
