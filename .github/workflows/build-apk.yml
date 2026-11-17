@@ -2,6 +2,9 @@ name: build-apk
 
 # 本地没有 JDK / Android SDK，所以 APK 只能在云端出。
 # 手动触发一次即可：Actions → build-apk → Run workflow
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
   push:
@@ -61,6 +64,18 @@ jobs:
           name: mathapp-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: 发布到 Release（单文件 APK，一个链接就能下）
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: 数学答疑 完整版 v1.0.${{ github.run_number }}
+          body: |
+            单文件完整版：APK 内置引擎包，首次启动自动解压（约 645 MB，2–5 分钟）。
+            引擎：sympy 1.14 / z3 5.4.1 / python-flint(Arb) 0.9 / PARI 2.15.4 / numpy 2.5.4 / OR-Tools CP-SAT 9.15 / cvc5 1.4.2 + Gröbner。
+            装机：装 APK → 打开 → 等引擎卡走完 → 设置里填 OpenAI 兼容端点与 Key。
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          fail_on_unmatched_files: true
 
   engine-pack:
     name: 引擎包（arm64 rootfs + 七引擎）
