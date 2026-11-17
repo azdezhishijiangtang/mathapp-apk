@@ -8,8 +8,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         // proot 需要从应用数据目录执行二进制，Android 10+ 只在 targetSdk<29 下允许
         targetSdkVersion 28
-        versionCode 7
-        versionName "2.5"
+        versionCode 8
+        versionName "2.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -24,10 +24,26 @@ android {
     androidResources {
         noCompress += ["gz"]
     }
+    signingConfigs {
+        // 正式签名：CI 里由 GitHub Secrets 注入环境变量；本地没配就自动跳过（出 debug 包）
+        release {
+            def ks = System.getenv('MATHAPP_KEYSTORE')
+            if (ks) {
+                storeFile file(ks)
+                storeType 'PKCS12'
+                storePassword System.getenv('MATHAPP_STOREPASS')
+                keyAlias System.getenv('MATHAPP_ALIAS') ?: 'mathapp'
+                keyPassword System.getenv('MATHAPP_KEYPASS') ?: System.getenv('MATHAPP_STOREPASS')
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (System.getenv('MATHAPP_KEYSTORE')) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

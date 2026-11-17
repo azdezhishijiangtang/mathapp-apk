@@ -57,16 +57,34 @@ jobs:
           npm test
           npx cap sync android
 
-      - name: 编译 APK
+      - name: 解开正式签名 keystore（配了 secret 才有）
+        if: ${{ secrets.MATHAPP_KEYSTORE_B64 != '' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ks"
+          printf '%s' "${{ secrets.MATHAPP_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/ks/mathapp.p12"
+          echo "MATHAPP_KEYSTORE=$RUNNER_TEMP/ks/mathapp.p12" >> "$GITHUB_ENV"
+          echo "MATHAPP_STOREPASS=${{ secrets.MATHAPP_STOREPASS }}" >> "$GITHUB_ENV"
+          echo "MATHAPP_ALIAS=${{ secrets.MATHAPP_ALIAS }}" >> "$GITHUB_ENV"
+          echo "MATHAPP_KEYPASS=${{ secrets.MATHAPP_KEYPASS }}" >> "$GITHUB_ENV"
+          ls -l "$RUNNER_TEMP/ks/mathapp.p12"
+
+      - name: 编译 APK（有签名出 release，没有就出 debug）
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          if [ -n "$MATHAPP_KEYSTORE" ]; then
+            echo "用正式 keystore 签名：assembleRelease"
+            ./gradlew assembleRelease --no-daemon --stacktrace
+          else
+            echo "没配签名 secret：出 debug 包"
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          fi
+          ls -lh app/build/outputs/apk/*/*.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: mathapp-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: android/app/build/outputs/apk/*/*.apk
           if-no-files-found: error
 
       - name: 发布到 Release（单文件 APK，一个链接就能下）
@@ -78,7 +96,9 @@ jobs:
             单文件完整版：APK 内置引擎包，首次启动自动解压（约 645 MB，2–5 分钟）。
             引擎：sympy 1.14 / z3 5.4.1 / python-flint(Arb) 0.9 / PARI 2.15.4 / numpy 2.5.4 / OR-Tools CP-SAT 9.15 / cvc5 1.4.2 + Gröbner。
             装机：装 APK → 打开 → 等引擎卡走完 → 设置里填 OpenAI 兼容端点与 Key。
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/debug/app-debug.apk
           fail_on_unmatched_files: true
 
   engine-pack:
