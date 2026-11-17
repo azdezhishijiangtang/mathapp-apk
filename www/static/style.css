@@ -164,3 +164,30 @@ pre.code{background:rgba(255,255,255,.04);border:1px solid var(--line);border-ra
 .bub.ai{align-self:flex-start;background:rgba(255,255,255,.04);border:1px solid var(--line)}
 .bub .katex{font-size:1.02em}
 .rvq{font-size:14px}
+
+/* 功能市场 */
+#marketList{margin-top:8px}
+.mrow{border:1px solid #24303f;border-radius:10px;padding:9px 10px;margin:8px 0;background:#0f1620}
+.mrow.on{border-color:#2b4a6f;background:#111a26}
+.mtop{display:flex;align-items:center;gap:8px}
+.mtop b{font-size:14px;flex:1}
+.mdesc{font-size:12px;color:#93a4b8;margin-top:4px;line-height:1.5}
+.ghd{font-size:12px;color:#7d8fa3;margin:12px 0 4px;letter-spacing:.04em}
+
+/* 认知画像 / 档案 / 教练 */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
+.kpi{background:#111a26;border:1px solid #24303f;border-radius:9px;padding:8px 6px;text-align:center}
+.kpi b{display:block;font-size:16px;color:#e6edf6}
+.kpi span{font-size:11px;color:#8ea0b5}
+.cap{font-size:12px;color:#9fb0c4;margin:12px 0 5px}
+.brow{display:flex;align-items:center;gap:6px;margin:4px 0;font-size:12px}
+.blab{width:58px;color:#93a4b8;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btrack{flex:1;height:9px;background:#1b2532;border-radius:5px;overflow:hidden}
+.bfill{display:block;height:100%;background:linear-gradient(90deg,#2f6fed,#4f9cf9);border-radius:5px}
+.bval{width:34px;text-align:right;color:#c3d2e2;flex:none}
+.bq{border-left:3px solid #2f6fed;padding:6px 9px;background:#101a26;border-radius:0 8px 8px 0;font-size:13px;color:#cfdcea}
+.bub{margin:8px 0;border-radius:10px;padding:8px 10px;max-width:92%}
+.bub.me{background:#16233a;margin-left:auto}
+.bub.ai{background:#0f1620;border:1px solid #23303f}
+.bwho{font-size:11px;color:#7f93aa;margin-bottom:3px}
+.bub .body{font-size:14px;line-height:1.62}

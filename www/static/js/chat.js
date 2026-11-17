@@ -143,21 +143,15 @@ function openReview() {
 function gradeReview(g) {
   const it = S.rvCur;
   if (!it) return;
-  const rv = rvInit(it);
+  const prev = rvInit(it);
   const now = Date.now();
-  if (g < 3) {
-    rv.reps = 0;
-    rv.interval = 1;
-  } else {
-    rv.reps = (rv.reps || 0) + 1;
-    if (rv.reps === 1) rv.interval = 1;
-    else if (rv.reps === 2) rv.interval = 3;
-    else rv.interval = Math.max(1, Math.round((rv.interval || 1) * (rv.ease || 2.5)));
-  }
-  const diff = 4 - g;
-  rv.ease = Math.max(1.3, (rv.ease || 2.5) + (0.1 - diff * (0.08 + diff * 0.02)));
-  rv.last = now;
-  rv.due = now + rv.interval * 86400000;
+  const nx = (typeof fsrsNext === 'function')
+    ? fsrsNext(prev, g, now)
+    : { interval: g < 3 ? 1 : Math.max(1, Math.round((prev.interval || 1) * 2)), reps: (prev.reps || 0) + 1, ease: 2.5, D: 5, S: 1 };
+  const rv = prev;
+  rv.reps = nx.reps; rv.interval = nx.interval; rv.last = now; rv.due = now + nx.interval * 86400000;
+  rv.S = nx.S; rv.D = nx.D; rv.lapses = nx.lapses || 0; rv.grade = nx.grade || g;
+  rv.ease = rv.ease || 2.5;
   it.reviewed = (it.reviewed || 0) + 1;
   save();
   S.rvIdx = (S.rvIdx || 0) + 1;

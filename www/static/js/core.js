@@ -90,7 +90,8 @@ function render(text) {
   t = t.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (m, lang, code) => {
     const i = blocks.length;
     const l = String(lang || '').toLowerCase();
-    blocks.push(l === 'mermaid'
+    const wantMmd = l === 'mermaid' && !(typeof Mods !== 'undefined' && Mods.has && !Mods.has('mermaid'));
+    blocks.push(wantMmd
       ? '<div class="mmd" data-code="' + attr(code.trim()) + '">（图形渲染中…）</div>'
       : '<pre class="code">' + esc(code.replace(/\n+$/, '')) + '</pre>');
     return '\uE000B' + i + '\uE001';
@@ -181,6 +182,27 @@ async function health() {
   }
 }
 
+function envLine() {
+  const d = new Date();
+  const wd = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  const p2 = (n) => String(n).padStart(2, '0');
+  const native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  return '【环境】' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + wd + '，' + (native ? 'Android App' : 'Web') + '，中文。';
+}
+
+/** 把错误翻成「人话 + 下一步动作」 */
+function classifyErr(e) {
+  const st = e && (e.status || e.statusCode);
+  const msg = String((e && e.message) || e || '').slice(0, 300);
+  if (st === 401 || /401|invalid.*(key|api)|unauthor|认证失败/i.test(msg)) return { text: 'API Key 不对或没有权限', act: 'cfg' };
+  if (st === 402 || /insufficient|balance|余额|欠费/i.test(msg)) return { text: '账户余额不足', act: 'cfg' };
+  if (st === 429 || /rate.?limit|too many|限流|频繁/i.test(msg)) return { text: '请求太频繁，等一会儿再试', act: 'retry' };
+  if (/timeout|timed out|超时|ETIMEDOUT/i.test(msg)) return { text: '上游超时（压轴题常见，可降低强度或重试）', act: 'retry' };
+  if (/未就绪|引擎|rootfs|ECONNREFUSED/i.test(msg)) return { text: msg, act: 'engine' };
+  if (/Failed to fetch|NetworkError|network/i.test(msg)) return { text: '网络不通（检查端点地址或代理）', act: 'retry' };
+  return { text: msg || '请求失败', act: '' };
+}
+
 function flattenSystem(messages) {
   const sys = [], out = [];
   for (const m of messages || []) {
@@ -194,7 +216,12 @@ function flattenSystem(messages) {
   } else {
     out.unshift({ role: 'user', content: pre });
   }
-  return out;
+  // 附一行环境快照（日期/星期/平台），模型答「本周」「今年」这类题才不会算错日期
+  const cl = out.map((m) => ({ role: m.role, content: m.content }));
+  for (let i = cl.length - 1; i >= 0; i--) {
+    if (cl[i].role === 'user') { cl[i].content = String(cl[i].content || '') + '\n\n' + envLine(); break; }
+  }
+  return cl;
 }
 
 async function callLLM(messages, opt = {}) {

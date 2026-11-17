@@ -106,10 +106,18 @@ const Store = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
 
-  // 导出：真 zip（data.json + 原图），没有 fflate 就退回 JSON
+  // 导出：真 zip（manifest.json + data.json + 原图）；没有 fflate 就退回 JSON
+  // manifest 带格式名与版本号，导入端据此校验，避免把陌生文件灌进来
+  const FMT = 'mathapp-backup';
+  const FMT_VER = 3;
+
   function exportZip() {
     const items = S.items;
-    const payload = JSON.stringify({ app: 'mathapp', v: 3, at: Date.now(), items }, null, 1);
+    const meta = {
+      format: FMT, version: FMT_VER, app: 'mathapp', appVersion: '2.1',
+      exportedAt: new Date().toISOString(), counts: { items: items.length, images: 0 },
+    };
+    const payload = JSON.stringify({ format: FMT, version: FMT_VER, at: Date.now(), items }, null, 1);
     if (typeof FF === 'undefined' || !FF.zipSync) {
       download(new Blob([payload], { type: 'application/json' }), 'mathapp-backup-' + stamp() + '.json');
       return 'json';
@@ -125,6 +133,8 @@ const Store = (() => {
         } catch (e) { /* 单张图坏了不影响整体 */ }
       }
     }
+    meta.counts.images = imgs;
+    files['manifest.json'] = FF.strToU8(JSON.stringify(meta, null, 1));
     const z = FF.zipSync(files, { level: 6 });
     download(new Blob([z], { type: 'application/zip' }), 'mathapp-backup-' + stamp() + '.zip');
     return 'zip:' + imgs;
@@ -134,19 +144,20 @@ const Store = (() => {
     try { return JSON.parse(buf); } catch (e) { return null; }
   }
 
-  // 导入：.zip（含图片）或 .json；按 题目|时间 去重合并
+  // 导入：先整包校验，再一次性写；中途出错整体回滚，绝不半截覆盖
   function importFile(file, done) {
     const fr = new FileReader();
     fr.onload = () => {
-      let data = null;
+      let data = null, manifest = null;
       const u8 = new Uint8Array(fr.result);
       const isZip = u8[0] === 0x50 && u8[1] === 0x4b;
       if (isZip) {
         if (typeof FF === 'undefined' || !FF.unzipSync) { alert('这个包是 zip，但解压模块没加载'); return; }
         let files;
         try { files = FF.unzipSync(u8); } catch (e) { alert('zip 解不开：' + e.message); return; }
+        if (files['manifest.json']) manifest = readJson(FF.strFromU8(files['manifest.json']));
         const d = files['data.json'];
-        if (!d) { alert('zip 里没有 data.json'); return; }
+        if (!d) { alert('zip 里没有 data.json，不像是本应用的备份'); return; }
         data = readJson(FF.strFromU8(d));
         if (data) {
           for (const it of (data.items || [])) {
@@ -160,21 +171,51 @@ const Store = (() => {
           }
         }
       } else {
-        data = readJson(fr.result);
+        let txt = '';
+        try { txt = new TextDecoder('utf-8').decode(u8); } catch (e) { txt = String(fr.result); }
+        data = readJson(txt);
       }
-      if (!data) { alert('文件读不了'); return; }
-      const items = (data.items || data.hist || []).map(normItem);
-      if (!items.length) { alert('文件里没有记录'); return; }
-      const have = new Set(S.items.map((x) => x.problem + '|' + x.at));
+      if (!data) { alert('文件读不了（不是合法 JSON）'); return; }
+
+      // ---- 第一关：格式与版本校验 ----
+      const m = manifest || data;
+      if (m.format && m.format !== FMT) { alert('这不是本应用的备份（format=' + m.format + '）'); return; }
+      const ver = Number(m.version || m.v || 1);
+      if (!(ver >= 1 && ver <= FMT_VER)) {
+        alert('备份格式版本 ' + ver + ' 不支持：本机最高 ' + FMT_VER + '，请先升级应用');
+        return;
+      }
+      const raw = data.items || data.hist || [];
+      if (!Array.isArray(raw)) { alert('备份里的记录结构不对（items 不是数组）'); return; }
+
+      // ---- 第二关：逐条转换，任何一条炸了就整体放弃 ----
+      let items;
+      try {
+        items = raw.map(normItem).filter((x) => x && x.problem && x.at);
+      } catch (e) {
+        alert('记录解析失败，什么都没有导入：' + e.message);
+        return;
+      }
+      if (!items.length) { alert('备份里没有可用的记录'); return; }
+
+      // ---- 第三关：先存快照，写失败就回滚 ----
+      const snapshot = JSON.stringify(S.items);
       let add = 0;
-      for (const it of items) {
-        const k = it.problem + '|' + it.at;
-        if (have.has(k)) continue;
-        S.items.push(it); add++;
+      try {
+        const have = new Set(S.items.map((x) => x.problem + '|' + x.at));
+        for (const it of items) {
+          const k = it.problem + '|' + it.at;
+          if (have.has(k)) continue;
+          S.items.push(it); have.add(k); add++;
+        }
+        S.items.sort((a, b) => b.at - a.at);
+        save(); queue();
+      } catch (e) {
+        try { S.items = JSON.parse(snapshot); save(); } catch (e2) { /* 忽略 */ }
+        alert('导入时出错，已恢复到导入前的数据：' + e.message);
+        return;
       }
-      S.items.sort((a, b) => b.at - a.at);
-      save(); queue();
-      alert(`导入完成：新增 ${add} 条，跳过 ${items.length - add} 条重复`);
+      alert('导入完成：新增 ' + add + ' 条，跳过 ' + (items.length - add) + ' 条重复');
       if (done) done();
     };
     fr.readAsArrayBuffer(file);
@@ -244,6 +285,7 @@ const Mermaid = {
     return Mermaid.loading;
   },
   async decorate(root) {
+    if (typeof Mods !== 'undefined' && Mods.has && !Mods.has('mermaid')) return 0;
     const nodes = [...((root || document).querySelectorAll('.mmd[data-code]'))];
     if (!nodes.length) return 0;
     let m;

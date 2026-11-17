@@ -1,7 +1,10 @@
 /* 数学答疑 Service Worker：只缓存外壳与本地资源，/api/* 一律直连 */
-const CACHE = 'mathapp-v7';
+const CACHE = 'mathapp-v9';
 const ASSETS = [
   '/', '/static/js/native.js',
+  '/static/js/modules.js',
+  '/static/js/growth.js',
+  '/static/js/tree.js',
   '/static/js/core.js', '/static/js/store.js', '/static/js/app.js', '/static/js/chat.js', '/static/js/extra.js', '/static/vendor/mlp/mathseg.min.js', '/static/vendor/mlp/zip.min.js', '/static/style.css',
   '/manifest.webmanifest', '/static/icon.svg',
   '/static/vendor/katex/katex.min.js', '/static/vendor/katex/katex.min.css',

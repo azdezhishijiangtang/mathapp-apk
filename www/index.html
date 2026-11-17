@@ -185,6 +185,9 @@
     <p class="tip" id="cfgTestOut"></p>
     <hr class="sep">
     <div class="row">
+      <button class="primary sm" id="btnMarket">功能市场（装 / 卸功能）</button>
+    </div>
+    <div class="row">
       <button class="ghost sm" id="btnExport">导出备份</button>
       <button class="ghost sm" id="btnImport">导入备份</button>
       <input type="file" id="fileImport" accept="application/json,.json" class="hide">
@@ -241,14 +244,19 @@
 <script src="/static/vendor/mlp/zip.min.js"></script>
 <script src="/static/js/native.js"></script>
   <script src="/static/js/core.js"></script>
+<script src="/static/js/modules.js"></script>
 <script src="/static/js/store.js"></script>
 <script src="/static/js/app.js"></script>
 <script src="/static/js/chat.js"></script>
 <script src="/static/js/extra.js"></script>
+<script src="/static/js/growth.js"></script>
+<script src="/static/js/tree.js"></script>
 <script src="/static/vendor/tess/tesseract.min.js" defer></script>
 
 <section class="sheet hide" id="moreSheet">
   <div class="sheetHead"><b>更多工具</b><button class="ghost xs" data-close="moreSheet">关闭</button></div>
+  <div class="row"><button class="primary" id="btnMarket2">功能市场</button></div>
+  <div class="row"><button id="btnArchive">学习档案</button><button id="btnPortrait">认知画像</button><button id="btnCoach">学习教练</button></div>
   <div class="row"><button id="btnBatch">整页批改</button><button id="btnWeek">学习周报</button><button id="btnG3">立体画板</button></div>
   <div class="row"><button class="ghost" id="btnPrintWrong">导出错题卷（打印 / 存 PDF）</button></div>
   <div class="meta">整页批改：一页多题，逐题判定并进错题本；学习周报：本周错因与复习完成率；立体画板：拖拽旋转，导出图片给模型看。</div>
@@ -265,6 +273,52 @@
   <div class="sheetHead"><b>学习周报</b><button class="ghost xs" data-close="weekSheet">关闭</button></div>
   <div id="weekBody"></div>
   <div class="row"><button class="ghost" id="btnWeekPrint">打印 / 存 PDF</button></div>
+</section>
+
+<section class="sheet hide" id="archiveSheet">
+  <div class="sheetHead"><b>学习档案</b><button class="ghost xs" data-close="archiveSheet">关闭</button></div>
+  <div class="row"><input id="arcSearch" placeholder="按知识点 / 错因 / 题干搜索…" autocomplete="off"></div>
+  <div class="meta" id="arcSum"></div>
+  <div class="row"><button class="ghost sm" id="arcExport">导出 markdown</button></div>
+  <div id="arcList"></div>
+</section>
+
+<section class="sheet hide" id="portraitSheet">
+  <div class="sheetHead"><b>认知画像</b><button class="ghost xs" data-close="portraitSheet">关闭</button></div>
+  <div class="row"><button class="ghost xs" id="portraitRefresh">刷新</button><span class="meta">全部本地计算</span></div>
+  <div id="portraitBody"></div>
+  <p class="tip">保持率与通过率都是根据你本机记录估算的，样本少时只能当参考，不是测量结果。</p>
+</section>
+
+<section class="sheet hide" id="coachSheet">
+  <div class="sheetHead"><b>学习教练</b><button class="ghost xs" data-close="coachSheet">关闭</button></div>
+  <div class="row">
+    <select id="coachMode">
+      <option value="diag">诊断：我哪里在漏</option>
+      <option value="plan">规划：这周练什么</option>
+      <option value="socratic">苏格拉底：自己想</option>
+    </select>
+    <button class="ghost xs" id="coachClear">清空</button>
+  </div>
+  <div id="coachBody" class="chatlist"></div>
+  <div class="row"><input id="coachInput" placeholder="说说你现在的情况…" autocomplete="off"><button class="primary" id="coachSend">问</button></div>
+  <p class="tip">教练只依据你本机的学习档案说话；它不联网搜题，也不替你写作业。</p>
+</section>
+
+<section class="sheet hide" id="marketSheet">
+  <div class="sheetHead"><b>功能市场</b><button class="ghost xs" data-close="marketSheet">关闭</button></div>
+  <div class="meta" id="marketSum"></div>
+  <div class="row" id="marketPresets"></div>
+  <div id="marketList"></div>
+  <p class="tip">卸载只隐藏入口、不删你的题和记录；装回来数据还在。体积大的项（引擎包 / Mermaid）卸掉能立刻回收空间。</p>
+</section>
+
+<section class="sheet hide" id="treeSheet">
+  <div class="sheetHead"><b>问法与答案分支</b><button class="ghost xs" data-close="treeSheet">关闭</button></div>
+  <div id="treeBody"></div>
+  <p class="tip">同一道题可以有多种问法；每个问法下保留每一版答案，点一下就切换。改写问法不会丢掉旧的。</p>
+  <div class="row"><input id="treeQ" class="in" placeholder="把这道题换个问法，会另起一支" /><button class="ghost xs" id="treeEdit">按新问法再解</button></div>
+  <div class="row"><button class="ghost xs" id="treeRegen">当前问法再解一版</button></div>
 </section>
 
 <section class="sheet hide" id="g3Sheet">

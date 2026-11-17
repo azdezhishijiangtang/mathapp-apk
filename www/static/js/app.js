@@ -95,17 +95,32 @@ async function solve(problem, opts = {}) {
     }
   } catch (e) {
     if (e.name === 'AbortError') { note('已停止'); }
-    else { $('answerBody').innerHTML = '<span class="err">' + esc(e.message || String(e)) + '</span>'; note(''); }
+    else {
+      const c = classifyErr(e);
+      $('answerBody').innerHTML = '<span class="err">' + esc(c.text) + '</span>';
+      const acts = $('verifyActs');
+      if (acts && c.act) {
+        acts.innerHTML = c.act === 'cfg'
+          ? '<button class="ghost sm" id="errCfg">去检查端点与 Key</button>'
+          : c.act === 'retry' ? '<button class="ghost sm" id="errRetry">重试</button>'
+            : c.act === 'engine' ? '<button class="ghost sm" id="errEng">去装引擎</button>' : '';
+        const b = $('errCfg'); if (b) b.onclick = openCfg;
+        const b2 = $('errRetry'); if (b2) b2.onclick = () => solve(S.q || ($('q') || {}).value || '');
+        const b3 = $('errEng'); if (b3) b3.onclick = () => { const e2 = $('engCard'); if (e2) e2.classList.remove('hide'); };
+      }
+      note('');
+    }
   } finally {
     btn.disabled = false; $('btnStop').classList.add('hide'); S.abort = null;
   }
 
   if (r && r.content) {
+    let item = into ? S.items.find((x) => x.id === into) : null;
+    const qid = opts.qid || (item && typeof Tree !== 'undefined' ? Tree.qId(item) : 'q0');
     const rec = {
       id: 'b' + Date.now(), answer: r.content, think: r.reasoning || '',
-      model: S.cfg.model, verify: verifyResult, claims, rounds: round, at: Date.now(),
+      model: S.cfg.model, verify: verifyResult, claims, rounds: round, at: Date.now(), qid,
     };
-    let item = into ? S.items.find((x) => x.id === into) : null;
     if (item) {
       Branch.push(item, rec);
       item.at = Date.now();
@@ -114,6 +129,7 @@ async function solve(problem, opts = {}) {
         id: 'it' + Date.now(), problem, answer: rec.answer, think: rec.think, model: rec.model,
         verify: rec.verify, claims: rec.claims, rounds: rec.rounds, at: Date.now(), fav: false,
         branches: [rec], bi: 0,
+        qv: [{ id: 'q0', text: problem, at: Date.now() }], qsel: 'q0',
       };
       if (S.ocrImg) item.img = S.ocrImg;
       S.items.unshift(item);
@@ -157,10 +173,14 @@ function renderBranches(item) {
     const v = b.verify && b.verify.summary;
     const mark = v ? (v.refuted ? ' ⚠' : (v.proved ? ' ✓' : '')) : '';
     return '<button class="brchip ' + (i === bi ? 'on' : '') + '" data-i="' + i + '">第 ' + (i + 1) + ' 版' + mark + '</button>';
-  }).join('') + '<button class="brchip new" id="btnNewBranch">＋ 再解一版</button>';
+  }).join('') + '<button class="brchip new" id="btnNewBranch">＋ 再解一版</button>' +
+    '<button class="brchip" id="btnTree">问法 / 版本树</button>';
   el.querySelectorAll('[data-i]').forEach((b) => {
     b.onclick = () => {
       if (!Branch.use(item, +b.dataset.i)) return;
+      const L = Branch.list(item);
+      const bb = L[+b.dataset.i];
+      if (bb && bb.qid) item.qsel = bb.qid;
       save();
       showAnswer(item.model, item.answer, item.think || '');
       renderBranches(item);
@@ -175,6 +195,8 @@ function renderBranches(item) {
       solve(item.problem, { into: item.id, rounds: lv === 'cheap' ? 0 : (lv === 'strict' ? 3 : 2) });
     };
   }
+  const bt = $('btnTree');
+  if (bt) bt.onclick = () => { if (typeof Tree !== 'undefined') Tree.open(S.cur || item); };
 }
 
 let TESS = null;
@@ -463,7 +485,7 @@ function renderHist() {
   }
   if (kw) list = list.filter((x) => (x.problem + ' ' + x.answer).toLowerCase().includes(kw));
   $('histCount').textContent = list.length + ' / ' + S.items.length;
-  $('histList').innerHTML = list.map((h) => {
+  const rows = list.map((h) => {
     const v = h.verify && h.verify.summary
       ? ` · 验证 ${h.verify.summary.proved}/${h.verify.summary.total}${h.verify.summary.refuted ? ' ⚠' : ''}` : '';
     const w = h.wrong ? ` · 错题${h.rv ? (h.rv.due <= Date.now() ? '（今天复习）' : '（' + new Date(h.rv.due).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) + '）') : ''}` : '';
@@ -475,7 +497,9 @@ function renderHist() {
         <button class="ghost xs" data-act="fav">${h.fav ? '取消收藏' : '收藏'}</button>
         <button class="ghost xs danger" data-act="del">删除</button>
       </div></div>`;
-  }).join('') || '<div class="vdetail">没有记录</div>';
+  });
+  const grouped = (S.tab === 'all' && !kw) ? groupRows(list, rows) : rows;
+  $('histList').innerHTML = grouped.join('') || '<div class="vdetail">没有记录</div>';
 
   [...$('histList').querySelectorAll('.hitem')].forEach((el) => {
     const id = el.dataset.id;
@@ -491,6 +515,27 @@ function renderHist() {
       }
     });
   });
+}
+
+/** 记录按「今天 / 昨天 / 7 天内 / 30 天内 / 按月」分组，省掉搜索框的使用压力 */
+function groupRows(list, rows) {
+  const DAY = 86400000;
+  const sod = (t) => new Date(t).setHours(0, 0, 0, 0);
+  const now = Date.now();
+  const out = [];
+  let last = '';
+  list.forEach((h, i) => {
+    const diff = Math.floor((now - sod(h.at)) / DAY);
+    let k;
+    if (diff <= 0) k = '今天';
+    else if (diff <= 1) k = '昨天';
+    else if (diff < 7) k = '7 天内';
+    else if (diff < 30) k = '30 天内';
+    else { const d = new Date(h.at); k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+    if (k !== last) { out.push('<div class="ghd">' + k + '</div>'); last = k; }
+    out.push(rows[i]);
+  });
+  return out;
 }
 
 function openItem(h) {
