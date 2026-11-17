@@ -75,7 +75,7 @@ public class LocalBackendPlugin extends Plugin {
             new Thread(() -> {
                 try {
                     notify("extract", 0, "首次启动：解压内置引擎包…");
-                    extractStream(getContext().getAssets().open("rootfs.tar.gz"));
+                    { InputStream pk = openPackAsset(); if (pk == null) throw new IOException("APK 里没找到引擎包"); extractStream(pk); }
                 } catch (Exception e) {
                     c0.reject("解压内置引擎包失败：" + e.getMessage());
                     return;
@@ -114,7 +114,7 @@ public class LocalBackendPlugin extends Plugin {
         final PluginCall c = call;
         new Thread(() -> {
             try {
-                extractStream(getContext().getAssets().open("rootfs.tar.gz"));
+                { InputStream pk = openPackAsset(); if (pk == null) throw new IOException("APK 里没找到引擎包"); extractStream(pk); }
                 doStart(c);
             } catch (Exception e) {
                 c.reject("安装失败：" + e.getMessage());
@@ -295,23 +295,47 @@ public class LocalBackendPlugin extends Plugin {
         }
     }
 
-    /** 内置引擎包是否随 APK 打包（assets/rootfs.tar.gz） */
-    private boolean hasAssetPack() {
+
+    /**
+     * 打开 APK 内置引擎包。AAPT2 打包时会把 .tar.gz 解成 .tar 并改名，
+     * 所以两种名字都要认，且按魔数判断是不是 gzip。
+     */
+    private java.io.InputStream openPackAsset() throws IOException {
+        for (String n : new String[]{"rootfs.tar.gz", "rootfs.tar"}) {
+            try { return getContext().getAssets().open(n); }
+            catch (IOException ignored) { }
+        }
+        return null;
+    }
+
+    /** 内置引擎包文件名（没有则 null） */
+    private String packAssetName() {
         try {
             String[] list = getContext().getAssets().list("");
-            if (list == null) return false;
-            for (String n : list) if ("rootfs.tar.gz".equals(n)) return true;
-        } catch (IOException ignored) {}
-        return false;
+            if (list == null) return null;
+            for (String n : list) if ("rootfs.tar.gz".equals(n) || "rootfs.tar".equals(n)) return n;
+        } catch (IOException ignored) { }
+        return null;
     }
+
+    /** 内置引擎包是否随 APK 打包（assets/rootfs.tar.gz 或 .tar） */
+    private boolean hasAssetPack() { return packAssetName() != null; }
 
     private void extractStream(InputStream rawIn) throws IOException {
         File d = dir();
         deleteRec(d);
         d.mkdirs();
         notify("extract", 0, "开始解压…");
-        try (TarArchiveInputStream tin =
-                     new TarArchiveInputStream(new GZIPInputStream(new java.io.BufferedInputStream(rawIn, 1 << 20)))) {
+        java.io.BufferedInputStream bin = new java.io.BufferedInputStream(rawIn, 1 << 20);
+        bin.mark(4);
+        boolean gz = true;
+        try {
+            int b0 = bin.read(), b1 = bin.read();
+            gz = (b0 == 0x1f && b1 == 0x8b);
+        } catch (IOException ignored) { }
+        bin.reset();
+        InputStream body = gz ? new GZIPInputStream(bin) : bin;
+        try (TarArchiveInputStream tin = new TarArchiveInputStream(new java.io.BufferedInputStream(body, 1 << 20))) {
             TarArchiveEntry e;
             byte[] buf = new byte[1 << 16];
             int seen = 0;
@@ -396,7 +420,7 @@ public class LocalBackendPlugin extends Plugin {
                         : ("引擎包已更新（" + lv + " → " + av + "），重新解压…"));
                 stopBackend();
                 deleteRec(dir());
-                extractStream(getContext().getAssets().open("rootfs.tar.gz"));
+                { InputStream pk = openPackAsset(); if (pk == null) throw new IOException("APK 里没找到引擎包"); extractStream(pk); }
                 doStart(c);
             } catch (Exception e) {
                 c.reject("重新解压引擎包失败：" + e.getMessage());

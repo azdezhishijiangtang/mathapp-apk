@@ -27,7 +27,7 @@ jobs:
       - name: 核对引擎包已就位
         run: |
           ls -lh android/app/src/main/assets/
-          test -f android/app/src/main/assets/rootfs.tar.gz
+          test -f android/app/src/main/assets/rootfs.tar.gz || test -f android/app/src/main/assets/rootfs.tar
           # 引擎版本号：APK 启动时与本机 rootfs 里的 engine.version 比对，不一致就重新解压
           cp android/app/src/main/assets/engine-version.txt android/app/src/main/assets/engine.version
           cat android/app/src/main/assets/engine.version
