@@ -314,3 +314,87 @@ header.bar .brand{flex:1;display:flex;align-items:center;justify-content:center;
   #onboard,#engCard,#dueBar,footer.foot2{grid-column:auto!important}
 }
 @media (max-width:899px){ main{padding:0 10px} }
+
+/* ---------- v2.6 配色重做：对比更清楚，层级更整齐 ---------- */
+
+:root{
+  color-scheme: dark;
+  --bg:#0b1017; --panel:#141b24; --panel2:#1b2530;
+  --line:#2b3746; --line2:#3d4d60;
+  --fg:#eef3f8; --dim:#9aa8b6;
+  --acc:#3fb950; --acc2:#4c9eff;
+  --warn:#e3b341; --bad:#ff6b60; --think:#a99cff;
+}
+
+@media (prefers-color-scheme: light){
+  :root{
+    color-scheme: light;
+    --bg:#f5f7fa; --panel:#ffffff; --panel2:#eef2f7;
+    --line:#dbe2ea; --line2:#c3ced9;
+    --fg:#0f1419; --dim:#5a6673;
+    --acc:#1a7f37; --acc2:#1168d8;
+    --warn:#8a5a00; --bad:#c9251b; --think:#5f51c9;
+  }
+}
+
+/* 卡片：极浅的投影把层次拉开，不用重描边 */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 1px 2px #00000026}
+.ask{box-shadow:0 1px 3px #00000033}
+
+/* 按钮：三种身份一眼分得开（主操作 / 普通 / 次要） */
+button{border-color:var(--line);background:var(--panel2);color:var(--fg)}
+button:hover{border-color:var(--line2)}
+button.primary{background:var(--acc2);border-color:transparent;color:#fff;font-weight:600;
+  box-shadow:0 1px 2px #00000033}
+button.ghost{background:transparent;border-color:var(--line2);color:var(--fg)}
+button.ghost:hover{background:var(--panel2)}
+button:disabled{opacity:.45}
+
+/* 语义色统一走变量：成立=绿、未判定=灰、被推翻=红、警告=黄 */
+.badge{font-weight:700;letter-spacing:.01em}
+.badge.ok,.cross.ok b{color:var(--acc)}
+.badge.ok{background:color-mix(in srgb,var(--acc) 16%,transparent);
+  border:1px solid color-mix(in srgb,var(--acc) 42%,transparent)}
+.badge.no{background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
+.badge.bad,.cross.bad b{color:var(--bad)}
+.badge.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);
+  border:1px solid color-mix(in srgb,var(--bad) 42%,transparent)}
+.badge.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);
+  border:1px solid color-mix(in srgb,var(--warn) 42%,transparent);color:var(--warn)}
+.cross.ok{background:color-mix(in srgb,var(--acc) 12%,transparent);
+  border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
+.cross.bad{background:color-mix(in srgb,var(--bad) 12%,transparent);
+  border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+.chip.topic{background:color-mix(in srgb,var(--acc) 12%,transparent);color:var(--acc);
+  border-color:color-mix(in srgb,var(--acc) 38%,transparent)}
+.chip.err{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad);
+  border-color:color-mix(in srgb,var(--bad) 38%,transparent)}
+.tag{background:color-mix(in srgb,var(--acc2) 15%,transparent);color:var(--acc2);
+  border-color:color-mix(in srgb,var(--acc2) 40%,transparent)}
+
+/* 文字层级：标题更实，说明更轻，正文最实 */
+h1,h2,h3,.sect{color:var(--fg)}
+.sect{color:var(--dim)}
+.tip,.meta{color:var(--dim)}
+.body{color:var(--fg)}
+.body b,.body strong{color:var(--fg);font-weight:600}
+.body .boxed{background:color-mix(in srgb,var(--acc) 14%,transparent);
+  border-color:color-mix(in srgb,var(--acc) 40%,transparent);color:var(--fg);font-weight:600}
+
+/* 输入控件：焦点用强调色描边，其余时候不抢眼 */
+input,select,textarea{background:var(--panel2);border:1px solid var(--line);color:var(--fg)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc2);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--acc2) 18%,transparent)}
+
+/* 细线统一：分隔用 --line，强调用 --line2 */
+.sep,hr{border:none;border-top:1px solid var(--line)}
+.card .head{border-bottom-color:var(--line)}
+#answerFoot{border-top-color:var(--line)}
+header.bar{border-bottom-color:var(--line);background:var(--bg)}
+
+/* 列表项：hover / active 状态清楚 */
+.hitem:hover,.vitem:hover{border-color:var(--line2)}
+.vitem{background:var(--panel2)}
+.bub.me{background:color-mix(in srgb,var(--acc2) 16%,transparent);
+  border-color:color-mix(in srgb,var(--acc2) 38%,transparent)}

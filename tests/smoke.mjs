@@ -126,6 +126,12 @@ ok('空状态问候存在', !!w.document.getElementById('hero'));
 ok('原入口搬进更多工具', !!w.document.querySelector('#moreSheet #btnHist') && !!w.document.querySelector('#moreSheet #btnCfg'));
 ok('单列居中样式已写入', /main\{display:block!important;max-width:860px/.test(css));
 
+// v2.6 配色：语义色走变量、深浅两套、主按钮与次按钮分得开
+ok('主按钮用强调色而非渐变', /button\.primary\{background:var\(--acc2\)/.test(css));
+ok('语义徽章用变量', /\.badge\.ok\{background:color-mix\(in srgb,var\(--acc\)/.test(css));
+ok('浅色主题另有一套变量', /color-scheme: light/.test(css));
+ok('焦点有可见描边', /input:focus,select:focus,textarea:focus\{[^}]*box-shadow/.test(css));
+
 try { w.close(); } catch (e) {}
 if (fail.length) { console.log('\n失败 ' + fail.length + ' 项'); process.exit(1); }
 console.log('\n全部通过');
