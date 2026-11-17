@@ -58,14 +58,22 @@ jobs:
           npx cap sync android
 
       - name: 解开正式签名 keystore（配了 secret 才有）
-        if: ${{ secrets.MATHAPP_KEYSTORE_B64 != '' }}
+        env:
+          KS_B64: ${{ secrets.MATHAPP_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.MATHAPP_STOREPASS }}
+          KS_ALIAS: ${{ secrets.MATHAPP_ALIAS }}
+          KS_KEYPASS: ${{ secrets.MATHAPP_KEYPASS }}
         run: |
+          if [ -z "$KS_B64" ]; then
+            echo "没配签名 secret：这次出 debug 包"
+            exit 0
+          fi
           mkdir -p "$RUNNER_TEMP/ks"
-          printf '%s' "${{ secrets.MATHAPP_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/ks/mathapp.p12"
+          printf '%s' "$KS_B64" | base64 -d > "$RUNNER_TEMP/ks/mathapp.p12"
           echo "MATHAPP_KEYSTORE=$RUNNER_TEMP/ks/mathapp.p12" >> "$GITHUB_ENV"
-          echo "MATHAPP_STOREPASS=${{ secrets.MATHAPP_STOREPASS }}" >> "$GITHUB_ENV"
-          echo "MATHAPP_ALIAS=${{ secrets.MATHAPP_ALIAS }}" >> "$GITHUB_ENV"
-          echo "MATHAPP_KEYPASS=${{ secrets.MATHAPP_KEYPASS }}" >> "$GITHUB_ENV"
+          echo "MATHAPP_STOREPASS=$KS_PASS" >> "$GITHUB_ENV"
+          echo "MATHAPP_ALIAS=$KS_ALIAS" >> "$GITHUB_ENV"
+          echo "MATHAPP_KEYPASS=$KS_KEYPASS" >> "$GITHUB_ENV"
           ls -l "$RUNNER_TEMP/ks/mathapp.p12"
 
       - name: 编译 APK（有签名出 release，没有就出 debug）
