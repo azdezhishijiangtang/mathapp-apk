@@ -119,6 +119,15 @@ function renderCross(c) {
 }
 
 async function solve(problem, opts = {}) {
+  // 对话式：把提问显示成一条用户消息
+  try {
+    const echo = $('qEcho');
+    if (echo && !opts.silentEcho) {
+      echo.querySelector('.bubx').innerHTML = render(problem);
+      echo.classList.remove('hide');
+      ($('hero') || {}).classList && $('hero').classList.add('hide');
+    }
+  } catch (e) { }
   if (!S.cfg.base) { openCfg(); return; }
   const into = opts.into || null;          // 有则作为「新一版」并入已有记录
   const btn = $('btnSolve');
@@ -761,6 +770,13 @@ function bind() {
   };
   $('btnStop').onclick = () => { if (S.abort) S.abort.abort(); };
   $('btnClearQ').onclick = () => { $('q').value = ''; updateQMeta(); autoGrow(); };
+  const bKbd = $('btnKbd');
+  if (bKbd) bKbd.onclick = () => { const w = $('kbdWrap'); if (w) { w.classList.toggle('hide'); w.open = !w.classList.contains('hide'); } };
+  const chips = document.querySelectorAll('#exChips [data-ex]');
+  for (let i = 0; i < chips.length; i++) chips[i].onclick = () => {
+    $('q').value = chips[i].getAttribute('data-ex');
+    updateQMeta(); autoGrow(); $('q').focus();
+  };
   $('btnPaste').onclick = async () => {
     try {
       const t = await navigator.clipboard.readText();
@@ -1101,7 +1117,7 @@ function newSession() {
   S.cur = null;
   const q = $('q');
   if (q) { q.value = ''; q.style.height = ''; }
-  ['answer', 'verify', 'chat', 'teach', 'ocrBox'].forEach((k) => { const e = $(k); if (e) e.classList.add('hide'); });
+  ['answer', 'verify', 'chat', 'teach', 'ocrBox', 'qEcho'].forEach((k) => { const e = $(k); if (e) e.classList.add('hide'); });
   ['answerBody', 'chatList', 'followList'].forEach((k) => { const e = $(k); if (e) e.innerHTML = ''; });
   if ($('qMeta')) $('qMeta').textContent = '';
   syncHero();

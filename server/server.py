@@ -147,7 +147,7 @@ class H(BaseHTTPRequestHandler):
                 info["engines"].append("%s %s" % (label, getattr(m, "__version__", "?")))
             except Exception:
                 pass
-        info["version"] = "1.7"
+        info["version"] = "2.9"
         info["backends"] = ["sympy", "z3", "arb", "pari", "numpy", "cpsat", "cvc5", "groebner"]
         info["cache_entries"] = len(STATE["cache"])
         return info

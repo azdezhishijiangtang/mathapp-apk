@@ -124,7 +124,7 @@ ok('顶栏新对话按钮存在', !!w.document.getElementById('btnNew'));
 ok('顶栏不再堆三个文字按钮', !w.document.querySelector('header.bar #btnCfg'));
 ok('空状态问候存在', !!w.document.getElementById('hero'));
 ok('原入口搬进更多工具', !!w.document.querySelector('#moreSheet #btnHist') && !!w.document.querySelector('#moreSheet #btnCfg'));
-ok('单列居中样式已写入', /main\{display:block!important;max-width:860px/.test(css));
+ok('单列居中样式已写入', /main\{[^}]*max-width:760px!important/.test(css));
 
 // v2.6 配色：语义色走变量、深浅两套、主按钮与次按钮分得开
 ok('主按钮用强调色而非渐变', /button\.primary\{background:var\(--acc2\)/.test(css));
@@ -150,6 +150,15 @@ ok('看过之后不再出现引导', onb.classList.contains('hide'));
 X.S.cfg.base = 'http://x/v1'; X.S.cfg.onboarded = 0; X.syncOnboard();
 ok('已配端点不再出现引导', onb.classList.contains('hide'));
 ok('菜单里能重新打开说明', !!w.document.getElementById('btnHelp'));
+
+// v2.9 对话式极简：底部输入坞 / 用户气泡 / 空状态建议 / 抽屉
+ok('底部输入坞存在', !!w.document.getElementById('dock') && !!w.document.querySelector('#dock #q'));
+ok('发送按钮在输入坞内', !!w.document.querySelector('#dock #btnSolve'));
+ok('用户气泡节点存在', !!w.document.getElementById('qEcho'));
+ok('空状态有四个建议', w.document.querySelectorAll('#exChips [data-ex]').length === 4);
+ok('旧的大表单已拆掉', !w.document.querySelector('section.ask'));
+ok('输入坞固定在底部', /\.dock\{position:fixed/.test(css));
+ok('答案消息块去掉卡片样式', /#colR>section\{border:0!important/.test(css));
 
 try { w.close(); } catch (e) {}
 if (fail.length) { console.log('\n失败 ' + fail.length + ' 项'); process.exit(1); }

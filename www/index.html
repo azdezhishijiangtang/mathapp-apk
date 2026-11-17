@@ -47,62 +47,20 @@
   </section>
 
   <div class="hero" id="hero">
+    <div class="logo">∑</div>
     <h1>今天想解决哪道题？</h1>
-    <p>粘贴题目、拍照识别或手打公式。答案会标出本机验证的结果：<br>哪些断言被证明、哪些只是没找到反例。</p>
+    <p>贴题目、拍照或手打公式。答案会标出本机验证的结果：哪些被证明、哪些只是没找到反例。</p>
+    <div class="sup" id="exChips">
+      <button data-ex="证明：对任意 x∈[0,π/2]，(1+sin x)/(π+2x) ≥ 1/π">证明不等式</button>
+      <button data-ex="解三角形：在 △ABC 中，a=3，b=4，C=60°，求 c 与面积">解三角形</button>
+      <button data-ex="求函数 f(x)=x^3-3x 在 [-2,3] 上的最大值与最小值">导数最值</button>
+      <button data-ex="求方程 sin x = x/2 的实根个数">实根个数</button>
+    </div>
   </div>
 
-  <section class="ask">
-    <textarea id="q" rows="4" placeholder="粘贴或输入题目（支持 LaTeX）：&#10;例如 设 f(x)=(1+sin x)/(π+2x)，证明 f 在 [0,π/2] 上的最小值为 1/π"></textarea>
-    <details id="kbdWrap" class="card kbd">
-      <summary>公式键盘（手打分数 / 根号 / 上下标）</summary>
-      <math-field id="mf"></math-field>
-      <div class="row">
-        <button class="ghost xs" id="btnMfIns">插入题目</button>
-        <button class="ghost xs" id="btnMfLine">换行插入</button>
-        <button class="ghost xs" id="btnMfClear">清空</button>
-      </div>
-      <div class="meta">插入后是 $$…$$ 形式，KaTeX 渲染与验证器都认。</div>
-    </details>
-    <div class="row">
-      <select id="level">
-        <option value="cheap">快速（1 次调用，不验证修正）</option>
-        <option value="std" selected>标准（解题 + 本地验证 + 反例修正 2 轮）</option>
-        <option value="strict">严格（修正 3 轮）</option>
-      </select>
-      <button id="btnMic" class="ghost">🎤 说题</button>
-      <button id="btnSolve" class="primary">解题</button>
-      <button id="btnStop" class="ghost hide">停止</button>
-    </div>
-    <div class="row">
-      <button class="ghost sm" id="btnOcr">拍照/图片识别</button>
-      <button class="ghost sm" id="btnPaste">粘贴</button>
-      <button class="ghost sm" id="btnClearQ">清空</button>
-      <span class="meta" id="qMeta"></span>
-    </div>
-    <input type="file" id="fileOcr" accept="image/*" class="hide">
-    <div id="ocrBox" class="hide">
-      <img id="ocrPrev" alt="待识别图片">
-      <div class="row">
-        <button class="ghost xs" id="btnOcrAgain">本地 OCR</button>
-        <button class="ghost xs" id="btnOcrModel">模型读图</button>
-        <button class="ghost xs" id="btnOcrDrop">移除</button>
-      </div>
-      <div class="meta" id="ocrStatus"></div>
-      <div id="paneLocal" class="panes hide">
-        <div class="phead">本地 OCR（离线）<span class="meta" id="localConf"></span></div>
-        <pre id="ocrText"></pre>
-        <button class="ghost xs" id="btnUseLocal">用这段</button>
-      </div>
-      <div id="paneVision" class="panes hide">
-        <div class="phead">模型读图<span class="meta" id="visionConf"></span></div>
-        <pre id="ocrVision"></pre>
-        <button class="ghost xs" id="btnUseVision">用这段</button>
-      </div>
-      <div class="row hide" id="ocrFillRow"><button class="primary xs" id="btnOcrFill">填入题目框</button></div>
-    </div>
-  </section>
 
   <div id="colR">
+  <div id="qEcho" class="hide"><div class="bubx"></div></div>
   <section id="answer" class="card hide">
     <div class="sect">解答</div>
     <div class="head">
@@ -172,6 +130,63 @@
     <span id="costLine"></span>
   </footer>
 </main>
+
+<div class="dock" id="dock">
+  <div class="dockIn">
+    <div id="ocrBox" class="hide">
+      <img id="ocrPrev" alt="待识别图片">
+      <div class="row">
+        <button class="ghost xs" id="btnOcrAgain">本地 OCR</button>
+        <button class="ghost xs" id="btnOcrModel">模型读图</button>
+        <button class="ghost xs" id="btnOcrDrop">移除</button>
+      </div>
+      <div class="meta" id="ocrStatus"></div>
+      <div id="paneLocal" class="panes hide">
+        <div class="phead">本地 OCR（离线）<span class="meta" id="localConf"></span></div>
+        <pre id="ocrText"></pre>
+        <button class="ghost xs" id="btnUseLocal">用这段</button>
+      </div>
+      <div id="paneVision" class="panes hide">
+        <div class="phead">模型读图<span class="meta" id="visionConf"></span></div>
+        <pre id="ocrVision"></pre>
+        <button class="ghost xs" id="btnUseVision">用这段</button>
+      </div>
+      <div class="row hide" id="ocrFillRow"><button class="primary xs" id="btnOcrFill">填入题目框</button></div>
+    </div>
+    <details id="kbdWrap" class="kbdbox hide">
+      <summary>公式键盘</summary>
+      <math-field id="mf"></math-field>
+      <div class="row">
+        <button class="ghost xs" id="btnMfIns">插入题目</button>
+        <button class="ghost xs" id="btnMfLine">换行插入</button>
+        <button class="ghost xs" id="btnMfClear">清空</button>
+      </div>
+      <div class="meta">插入后是 $$…$$ 形式，KaTeX 与验证器都认。</div>
+    </details>
+    <div class="dockBox">
+      <textarea id="q" rows="1" placeholder="发消息或输入题目（支持 LaTeX）"></textarea>
+      <div class="dockRow">
+        <button class="dicon" id="btnOcr" title="拍照 / 图片识别">＋</button>
+        <button class="dicon" id="btnMic" title="语音说题">🎤</button>
+        <button class="dicon" id="btnKbd" title="公式键盘">∑</button>
+        <select id="level" class="lvsel" title="解题强度">
+          <option value="cheap">快速</option>
+          <option value="std" selected>标准</option>
+          <option value="strict">严格</option>
+        </select>
+        <span class="meta grow" id="qMeta"></span>
+        <button class="send" id="btnSolve" title="发送">↑</button>
+        <button class="send stop hide" id="btnStop" title="停止">■</button>
+      </div>
+    </div>
+    <div class="dockFoot">
+      <button class="linky" id="btnPaste">粘贴</button>
+      <button class="linky" id="btnClearQ">清空</button>
+      <input type="file" id="fileOcr" accept="image/*" class="hide">
+    </div>
+  </div>
+</div>
+
 
 <!-- 设置 -->
 <div class="sheet hide" id="cfgSheet">

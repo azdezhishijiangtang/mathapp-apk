@@ -528,3 +528,65 @@ button.xs{min-height:30px;font-size:12.5px;padding:0 10px;border-radius:9px}
   #colR{display:block!important}
   .ask{position:static!important}
 }
+
+/* ---------- v2.9 对话式极简（对齐 DeepSeek / Kimi / 千问 的布局直觉） ---------- */
+:root{--rad:18px}
+body{max-width:none!important;margin:0!important;padding:0!important;background:var(--bg)}
+header.bar{background:var(--bg);border-bottom:0;position:sticky;top:0;z-index:30;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+header.bar .brand{font-size:16px;font-weight:600;letter-spacing:.02em}
+button.icon{width:38px;height:38px;min-height:0;border:0;background:transparent;border-radius:50%;font-size:19px;color:var(--fg);display:flex;align-items:center;justify-content:center}
+button.icon:active{background:var(--panel2)}
+main{max-width:760px!important;margin:0 auto!important;padding:0 16px 148px!important;display:block!important}
+
+/* 空状态：居中、留白大 */
+.hero{min-height:calc(100vh - 300px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:10px 4px}
+.hero .logo{width:54px;height:54px;border-radius:16px;background:var(--acc2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;margin-bottom:4px}
+.hero h1{font-size:23px!important;font-weight:600!important;margin:0!important;line-height:1.35}
+.hero p{font-size:13.5px!important;color:var(--dim);line-height:1.75;margin:0;max-width:34ch}
+.sup{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+.sup button{background:var(--panel2)!important;border:0!important;color:var(--fg)!important;font-size:13px;padding:9px 14px!important;border-radius:999px!important;min-height:0!important;box-shadow:none!important}
+
+/* 消息区：答案不再是"卡片"，是消息块 */
+#colR{display:block!important}
+#colR>section{border:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important;padding:0!important;margin:30px 0!important;max-width:none!important}
+#colR>section .head{border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:12px}
+.sect{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 10px;font-weight:600}
+.body{font-size:16.5px!important;line-height:1.8!important;max-width:none!important}
+#answerFoot{border-top:1px solid var(--line);padding-top:10px;margin-top:14px}
+
+/* 用户气泡 */
+#qEcho{display:flex;justify-content:flex-end;margin:6px 0 0}
+#qEcho .bubx{max-width:88%;background:var(--panel2);border-radius:16px 16px 5px 16px;padding:11px 14px;font-size:15.5px;line-height:1.7;overflow-wrap:anywhere;white-space:normal}
+#qEcho .bubx p{margin:0}
+
+/* 底部输入坞 */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:40;padding:6px 0 calc(8px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 62%,color-mix(in srgb,var(--bg) 0%,transparent))}
+.dockIn{max-width:760px;margin:0 auto;padding:0 12px}
+.dockBox{background:var(--panel);border:1px solid var(--line2);border-radius:22px;padding:8px 10px 7px;box-shadow:0 4px 20px rgba(16,24,40,.07)}
+.dockBox textarea#q{width:100%;border:0!important;background:transparent!important;box-shadow:none!important;font-size:16px;line-height:1.55;resize:none;max-height:38vh;padding:5px 4px;outline:none;border-radius:0!important}
+.dockRow{display:flex;align-items:center;gap:6px;margin-top:2px}
+button.dicon{width:34px;height:34px;min-height:0!important;border:0;background:var(--panel2);border-radius:50%;font-size:16px;line-height:1;padding:0;color:var(--fg);display:flex;align-items:center;justify-content:center}
+button.dicon:active{background:var(--line)}
+.lvsel{border:0!important;background:transparent!important;color:var(--dim)!important;font-size:13px;padding:0 2px!important;min-height:0;width:auto;box-shadow:none!important}
+.dockRow .grow{flex:1;text-align:right;font-size:12px}
+button.send{width:36px;height:36px;min-height:0!important;border-radius:50%;background:var(--acc2);color:#fff;border:0;font-size:17px;padding:0;display:flex;align-items:center;justify-content:center}
+button.send.stop{background:var(--bad);font-size:13px}
+.dockFoot{display:flex;justify-content:center;gap:14px;padding:6px 2px 0}
+.linky{background:transparent!important;border:0!important;color:var(--dim)!important;font-size:12px;min-height:0!important;padding:2px 4px!important}
+.kbdbox{background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:10px;margin-bottom:8px}
+.kbdbox summary{font-size:13px;color:var(--dim);cursor:pointer}
+.dock #ocrBox>img{max-height:26vh}
+.dock #ocrBox pre{max-height:22vh;overflow:auto;font-size:12px}
+
+/* 抽屉 = 左侧列表（记录 / 设置 / 工具），像 AI App 的 sidebar */
+#moreSheet{align-items:flex-start!important;justify-content:flex-start!important}
+#moreSheet .sheetIn{width:84%;max-width:320px;height:100%;max-height:100%;border-radius:0!important;padding:18px 12px;overflow-y:auto}
+#moreSheet h3{font-size:15px;margin:4px 0 14px;color:var(--dim);font-weight:500}
+#moreSheet button{width:100%;justify-content:flex-start!important;text-align:left;background:transparent!important;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;min-height:46px;padding:0 8px!important;font-size:15px;box-shadow:none!important}
+#moreSheet .row{display:block!important;margin:0!important}
+#moreSheet .sep{display:none}
+
+/* 设置/诊断等面板：整页式头部 */
+.sheetIn>h3:first-child{position:sticky;top:-2px;background:var(--panel);padding:8px 0 10px;margin:0 0 10px;border-bottom:1px solid var(--line);font-size:16px}
+
+@media (max-width:520px){.hero{min-height:calc(100vh - 250px)}}
