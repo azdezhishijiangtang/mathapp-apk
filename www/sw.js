@@ -1,5 +1,5 @@
 /* 数学答疑 Service Worker：只缓存外壳与本地资源，/api/* 一律直连 */
-const CACHE = 'mathapp-v10';
+const CACHE = 'mathapp-v11';
 const ASSETS = [
   '/', '/static/js/native.js',
   '/static/js/modules.js',

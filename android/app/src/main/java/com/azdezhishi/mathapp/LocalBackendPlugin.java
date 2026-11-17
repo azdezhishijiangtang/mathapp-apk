@@ -37,9 +37,11 @@ public class LocalBackendPlugin extends Plugin {
     private static final int PORT = 8117;
     private static final String ROOTFS = "rootfs";
     private static final String MARK = ".installed";
+    private static final String EVER = "opt/mathapp/engine.version";
 
     private Process proc;
     private volatile boolean starting = false;
+    private Thread wd;                       // 看护线程：引擎无响应就拉起来
 
     private File dir() { return new File(getContext().getFilesDir(), ROOTFS); }
 
@@ -66,6 +68,7 @@ public class LocalBackendPlugin extends Plugin {
     @PluginMethod
     public void start(PluginCall call) {
         if (health(600)) { JSObject r = ok(true, false); call.resolve(r); return; }
+        if (checkVersion(call)) return;      // 内置引擎包比本机新：自己重装，接管这次调用
         File d = rootfsReady();
         if (d == null && hasAssetPack()) {
             final PluginCall c0 = call;
@@ -100,7 +103,7 @@ public class LocalBackendPlugin extends Plugin {
             starting = false;
             notify("done", 100, up ? "引擎已就绪" : "引擎还在启动");
             JSObject r = ok(up, true);
-            if (up) c.resolve(r); else c.reject("后端启动超时，点「看日志」看原因");
+            if (up) { startWatchdog(); c.resolve(r); } else c.reject("后端启动超时，点「看日志」看原因");
         }).start();
     }
 
@@ -353,5 +356,89 @@ public class LocalBackendPlugin extends Plugin {
         } catch (Exception e) {
             return "(读日志失败: " + e.getMessage() + ")";
         }
+    }
+
+    /* ---------- 引擎包版本比对（升级 APK 后旧 rootfs 会被自动替换） ---------- */
+
+    private String localEngineVersion() {
+        File f = new File(dir(), EVER);
+        if (!f.exists()) return "";
+        try (java.io.BufferedReader r = new java.io.BufferedReader(
+                new java.io.InputStreamReader(new java.io.FileInputStream(f), "UTF-8"))) {
+            String l = r.readLine();
+            return l == null ? "" : l.trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private String assetEngineVersion() {
+        try (InputStream in = getContext().getAssets().open("engine.version")) {
+            java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(in, "UTF-8"));
+            String l = r.readLine();
+            return l == null ? "" : l.trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** 返回 true 表示已接管这次 start（正在后台重装） */
+    private boolean checkVersion(PluginCall call) {
+        final String av = assetEngineVersion();
+        if (av.isEmpty() || rootfsReady() == null) return false;
+        final String lv = localEngineVersion();
+        if (av.equals(lv)) return false;
+        final PluginCall c = call;
+        new Thread(() -> {
+            try {
+                notify("version", 0, lv.isEmpty()
+                        ? "引擎包缺少版本号，重新解压…"
+                        : ("引擎包已更新（" + lv + " → " + av + "），重新解压…"));
+                stopBackend();
+                deleteRec(dir());
+                extractStream(getContext().getAssets().open("rootfs.tar.gz"));
+                doStart(c);
+            } catch (Exception e) {
+                c.reject("重新解压引擎包失败：" + e.getMessage());
+            }
+        }).start();
+        return true;
+    }
+
+    /* ---------- 看护：进程被系统杀掉 / OOM 后自动拉起 ---------- */
+
+    private void stopBackend() {
+        try { if (proc != null) proc.destroy(); } catch (Exception ignored) { }
+        proc = null;
+        if (wd != null) { wd.interrupt(); wd = null; }
+    }
+
+    private void startWatchdog() {
+        if (wd != null && wd.isAlive()) return;
+        wd = new Thread(() -> {
+            int fails = 0;
+            while (true) {
+                try { Thread.sleep(10000); } catch (InterruptedException e) { return; }
+                if (starting) continue;
+                if (rootfsReady() == null) continue;
+                if (health(1500)) { fails = 0; continue; }
+                fails++;
+                if (fails > 3) {
+                    notify("watchdog", 0, "引擎连续 3 次重启都没起来，请点「看日志」");
+                    fails = 0;
+                    continue;
+                }
+                notify("watchdog", fails, "引擎无响应，正在重启 " + fails + "/3");
+                try { if (proc != null) proc.destroy(); } catch (Exception ignored) { }
+                proc = null;
+                try {
+                    spawn(rootfsReady());
+                } catch (Exception e) {
+                    notify("watchdog", fails, "重启失败：" + e.getMessage());
+                }
+            }
+        });
+        wd.setDaemon(true);
+        wd.start();
     }
 }

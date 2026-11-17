@@ -222,3 +222,9 @@ pre.code{background:rgba(255,255,255,.04);border:1px solid var(--line);border-ra
 .cross.ok{background:#3fb95018;border-color:#3fb95055}.cross.ok b{color:#7ee787}
 .cross.warn{background:#d2992218;border-color:#d2992255}.cross.warn b{color:var(--warn)}
 .cross.bad{background:#f8514918;border-color:#f8514955}.cross.bad b{color:var(--bad)}
+
+/* v2.3 诊断面板 */
+.drow{display:flex;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid #1e2635}
+.dk{flex:0 0 92px;color:var(--dim)}
+.dv{flex:1;min-width:0;word-break:break-all}
+.der{font-size:12px;color:#ffb4b4;padding:3px 0;word-break:break-all}

@@ -51,7 +51,7 @@ async function askChat(text) {
   try {
     const r = await callLLMRobust(use, {
       temp: 0.5,
-      onText: (t) => { bubble.innerHTML = render(t) || '<span class="vdetail">…</span>'; },
+      onText: (t) => { if (!bubble.__st) bubble.__st = mkStream(bubble); bubble.__st.push(t); },
     });
     const ans = (r.content || '').trim();
     bubble.innerHTML = render(ans) || '<span class="vdetail">（空回复）</span>';

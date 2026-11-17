@@ -9,6 +9,7 @@ REPO=$(cd "$HERE/.." && pwd)
 SRV="$REPO/server"                 # engine.py / server.py 等
 WEB="$REPO/www"                    # index.html + static/
 OUT=${1:-$HERE/rootfs.tar.gz}
+ENGINE_VERSION="2.3-$(date -u +%Y%m%d%H%M)"   # 每次构建都不同，APK 启动时用来做版本比对
 SUITE=${SUITE:-noble}
 MIRROR=${MIRROR:-http://ports.ubuntu.com/ubuntu-ports}
 ROOT=$HERE/rootfs
@@ -57,6 +58,8 @@ sudo cp -a "$WEB"/manifest.webmanifest "$WEB"/sw.js "$ROOT/opt/mathapp/web/" 2>/
 sudo cp -a "$WEB"/static/. "$ROOT/opt/mathapp/web/"
 sudo rm -rf "$ROOT/opt/mathapp/web/sw.js"    # APK 里不需要 service worker
 sudo chroot "$ROOT" mkdir -p /tmp /root /dev/shm
+echo "$ENGINE_VERSION" | sudo tee "$ROOT/opt/mathapp/engine.version" > /dev/null
+echo "$ENGINE_VERSION" > "$HERE/engine-version.txt"
 
 # 打包前必须卸掉伪文件系统，否则 /sys 会被打进 tar（读不完、还会报 I/O error）
 sudo umount -lf "$ROOT/dev" "$ROOT/proc" "$ROOT/sys" 2>/dev/null || true
@@ -64,5 +67,7 @@ trap - EXIT
 sudo mkdir -p "$ROOT/proc" "$ROOT/sys" "$ROOT/dev" "$ROOT/dev/shm"
 sudo tar --numeric-owner --exclude=./proc --exclude=./sys --exclude=./dev \
   -czf "$OUT" -C "$ROOT" .
-sha256sum "$OUT" | tee "$OUT.sha256"
+sha256sum "$OUT" > "$OUT.sha256"
+cat "$OUT.sha256"
+printf '%s\n' "$ENGINE_VERSION" > "$HERE/engine-version.txt"
 echo "引擎包：$OUT  $(du -h "$OUT" | cut -f1)"

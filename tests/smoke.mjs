@@ -25,7 +25,7 @@ w.fetch = async () => ({ ok: true, json: async () => ({ engines: [], version: 't
 w.katex = { renderToString: (tex) => '<span class="katex-stub">' + tex + '</span>' };
 
 const src = FILES.map((f) => fs.readFileSync(path.join(JS, f), 'utf8')).join('\n;\n') +
-  '\n;window.__exp={S,Mods,Tree,Store,Branch,render,toast,syncDueBar,boxedOf,normAns,renderVerify,renderCross,callLLM};';
+  '\n;window.__exp={S,Mods,Tree,Store,Branch,render,toast,syncDueBar,boxedOf,normAns,renderVerify,renderCross,callLLM,mkStream,ErrLog,renderDiag};';
 try { w.eval(src); } catch (e) { fail.push('脚本加载失败: ' + e.message); }
 w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
 const X = w.__exp || {};
@@ -85,6 +85,31 @@ const t = w.document.getElementById('toastAct');
 ok('撤销按钮存在', !!t);
 if (t) t.click();
 ok('撤销回调执行', hit === 1);
+
+// v2.3：流式节流 / 错误日志 / 快照 / 启动自检 / 诊断面板
+ok('诊断面板存在', !!w.document.getElementById('diagSheet') && !!w.document.getElementById('diagBody'));
+const sbox = w.document.createElement('div');
+const stx = X.mkStream(sbox, { wait: 10 });
+stx.push('$a$'); stx.push('$a+b$');
+ok('节流：未立刻重绘', sbox.innerHTML === '');
+await new Promise((r) => setTimeout(r, 60));
+ok('节流：合并后重绘一次', /katex-stub|a\+b/.test(sbox.innerHTML), sbox.innerHTML.slice(0, 60));
+stx.end('$c$');
+ok('节流：收尾用终稿', /katex-stub/.test(sbox.innerHTML));
+
+X.ErrLog.push('test', 'boom');
+ok('错误日志记录', X.ErrLog.list().some((e) => e.msg === 'boom'));
+X.ErrLog.clear();
+ok('错误日志清空', X.ErrLog.list().length === 0);
+
+const sc = await X.Store.selfCheck();
+ok('启动自检返回报告', !!sc && typeof sc.ok === 'boolean' && Array.isArray(sc.notes));
+const sn = await X.Store.Snap.put('t');
+ok('快照写入安全（无 IDB 时返回 null）', sn === null || typeof sn.n === 'number');
+const sl = await X.Store.Snap.list();
+ok('快照列表可用', Array.isArray(sl));
+await X.renderDiag();
+ok('诊断面板渲染出条目', w.document.querySelectorAll('#diagBody .drow').length >= 3);
 
 try { w.close(); } catch (e) {}
 if (fail.length) { console.log('\n失败 ' + fail.length + ' 项'); process.exit(1); }

@@ -204,6 +204,7 @@
     <hr class="sep">
     <div class="row">
       <button class="primary sm" id="btnMarket">功能市场（装 / 卸功能）</button>
+      <button class="ghost sm" id="btnDiag">本机诊断</button>
     </div>
     <div class="row">
       <button class="ghost sm" id="btnExport">导出备份</button>
@@ -277,6 +278,7 @@
   <div class="row"><button id="btnArchive">学习档案</button><button id="btnPortrait">认知画像</button><button id="btnCoach">学习教练</button></div>
   <div class="row"><button id="btnBatch">整页批改</button><button id="btnWeek">学习周报</button><button id="btnG3">立体画板</button></div>
   <div class="row"><button class="ghost" id="btnPrintWrong">导出错题卷（打印 / 存 PDF）</button></div>
+  <div class="row"><button class="ghost" id="btnDiag2">本机诊断</button></div>
   <div class="meta">整页批改：一页多题，逐题判定并进错题本；学习周报：本周错因与复习完成率；立体画板：拖拽旋转，导出图片给模型看。</div>
 </section>
 
@@ -321,6 +323,20 @@
   <div id="coachBody" class="chatlist"></div>
   <div class="row"><input id="coachInput" placeholder="说说你现在的情况…" autocomplete="off"><button class="primary" id="coachSend">问</button></div>
   <p class="tip">教练只依据你本机的学习档案说话；它不联网搜题，也不替你写作业。</p>
+</section>
+
+<section class="sheet hide" id="diagSheet">
+  <div class="sheetHead"><b>本机诊断</b><button class="ghost xs" data-close="diagSheet">关闭</button></div>
+  <div id="diagBody"></div>
+  <div class="row">
+    <button class="ghost xs" id="btnSnapNow">立即快照</button>
+    <button class="ghost xs" id="btnSnapRestore">从最近快照恢复</button>
+  </div>
+  <div class="row">
+    <button class="ghost xs" id="btnErrClear">清错误日志</button>
+    <button class="ghost xs" id="btnDiagCopy">复制诊断</button>
+  </div>
+  <p class="tip">快照存在索引库里，滚动保留 7 份；数据坏了会先自己修，修不了再手动回滚。报障时点「复制诊断」发我即可。</p>
 </section>
 
 <section class="sheet hide" id="marketSheet">

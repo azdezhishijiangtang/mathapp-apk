@@ -28,6 +28,9 @@ jobs:
         run: |
           ls -lh android/app/src/main/assets/
           test -f android/app/src/main/assets/rootfs.tar.gz
+          # 引擎版本号：APK 启动时与本机 rootfs 里的 engine.version 比对，不一致就重新解压
+          cp android/app/src/main/assets/engine-version.txt android/app/src/main/assets/engine.version
+          cat android/app/src/main/assets/engine.version
 
       - uses: actions/setup-java@v4
         with:
@@ -98,5 +101,28 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: engine-pack
-          path: pack/rootfs.tar.gz*
+          path: |
+            pack/rootfs.tar.gz*
+            pack/engine-version.txt
           if-no-files-found: error
+
+  engine-tests:
+    name: 引擎回归（arm64 runner，38 条用例）
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装验证引擎
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pari-gp
+          python -m pip install --upgrade pip
+          python -m pip install sympy==1.14.0 z3-solver==5.4.1.0 python-flint==0.9.0 \
+            numpy==2.5.4 ortools==9.15.6755 cvc5==1.4.2
+
+      - name: 跑引擎回归
+        run: python server/test_engine.py

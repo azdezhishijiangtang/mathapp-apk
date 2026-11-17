@@ -133,6 +133,7 @@ async function solve(problem, opts = {}) {
   const __lvl = (($('level') && $('level').value) || 'std');
   const useModel = (__lvl === 'cheap' && S.cfg.modelCheap) ? S.cfg.modelCheap : S.cfg.model;
   renderCross(null);
+  const ansStream = mkStream($('answerBody'));
 
   let messages = [
     { role: 'system', content: SOLVE_SYS },
@@ -144,7 +145,7 @@ async function solve(problem, opts = {}) {
     while (true) {
       r = await callLLMRobust(messages, {
         model: useModel,
-        onText: (t) => { $('answerBody').innerHTML = render(t); },
+        onText: (t) => ansStream.push(t),
         onThink: (t) => {
           $('thinkWrap').classList.remove('hide');
           $('think').textContent = t.length > 6000 ? t.slice(-6000) : t;
@@ -152,6 +153,7 @@ async function solve(problem, opts = {}) {
         },
         onNote: (m) => note(m),
       });
+      ansStream.end(null);
       showAnswer(useModel, r.content, r.reasoning);
       note(`${r.secs.toFixed(0)}s · 入 ${fmtTok(r.usage.prompt_tokens)} / 出 ${fmtTok(r.usage.completion_tokens)} · ${r.finish || '-'}` +
         (r.usage.credit !== undefined ? ` · ${r.usage.credit} 积分` : ''));
@@ -488,12 +490,13 @@ async function teach(extra) {
   $('teachWrap').classList.remove('hide');
   $('teachWrap').open = true;
   $('teachBody').textContent = '…';
+  const tStream = mkStream($('teachBody'));
   try {
     const r = await callLLMRobust(msgs, {
       temp: 0.7,
-      onText: (t) => { $('teachBody').innerHTML = render(t); },
+      onText: (t) => tStream.push(t),
     });
-    $('teachBody').innerHTML = render(r.content);
+    tStream.end(r.content);
     $('teachBody').dataset.raw = r.content;
   } catch (e) {
     $('teachBody').innerHTML = '<span class="err">' + esc(e.message) + '</span>';
@@ -954,4 +957,105 @@ document.addEventListener('DOMContentLoaded', () => {
       updateDueBadge = function () { const r = _u.apply(this, arguments); try { syncDueBar(); } catch (e) {} return r; };
     }
   } catch (e) {}
+});
+
+/* ---- v2.3 本机诊断 + 数据自检 ---- */
+
+async function renderDiag() {
+  const body = $('diagBody');
+  if (!body) return;
+  body.innerHTML = '<div class="meta">检查中…</div>';
+  const L = [];
+  let raw = '';
+  try { raw = localStorage.getItem(LS) || ''; } catch (e) { }
+  L.push(['记录', S.items.length + ' 条 · 本机存储 ' + (raw.length / 1024).toFixed(0) + ' KB']);
+  try { const rows = await Store.all(); L.push(['索引库', rows.length + ' 条']); }
+  catch (e) { L.push(['索引库', '不可用：' + e.message]); }
+  let snaps = [];
+  try { snaps = await Store.Snap.list(); } catch (e) { }
+  L.push(['快照', snaps.length ? snaps.length + ' 份 · 最近 ' + new Date(snaps[0].at).toLocaleString() + '（' + snaps[0].n + ' 条）' : '还没有']);
+  try {
+    const r = await (window.apiFetch || fetch)('/api/health');
+    const d = await r.json();
+    L.push(['后端', 'v' + (d.version || '?') + ' · ' + (location.host || '本机')]);
+    L.push(['引擎', (d.engines || []).length ? (d.engines || []).join('、') : '未就绪']);
+  } catch (e) {
+    L.push(['后端', '连不上：' + e.message]);
+    try { ErrLog.push('health', e.message); } catch (e2) { }
+  }
+  if (window.isNativeApp && window.isNativeApp()) {
+    try { const st = await window.engineStatus(); L.push(['引擎进程', JSON.stringify(st)]); } catch (e) { L.push(['引擎进程', String(e.message || e)]); }
+  }
+  let logTail = '';
+  if (window.engineLog) { try { const t = await window.engineLog(); logTail = String((t && (t.text || t.log || t)) || ''); } catch (e) { } }
+  const errs = (typeof ErrLog !== 'undefined') ? ErrLog.list().slice(0, 8) : [];
+  body.innerHTML = L.map(([k, v]) => '<div class="drow"><span class="dk">' + esc(k) + '</span><span class="dv">' + esc(v) + '</span></div>').join('') +
+    (snaps.length > 1 ? '<div class="meta">历史快照：' + snaps.slice(1).map((s) => new Date(s.at).toLocaleString() + '·' + s.n + '条').join(' ｜ ') + '</div>' : '') +
+    (errs.length ? '<div class="meta">最近错误：</div>' + errs.map((e) => '<div class="der">' + esc(new Date(e.at).toLocaleTimeString() + ' · ' + e.kind + ' · ' + e.msg) + '</div>').join('') : '<div class="meta">没有记录到错误</div>') +
+    (logTail ? '<div class="meta">引擎日志（尾部）：</div><pre class="code">' + esc(logTail.slice(-1600)) + '</pre>' : '');
+}
+
+async function diagCopy() {
+  const rows = [...document.querySelectorAll('#diagBody .drow')].map((r) => r.textContent.trim());
+  const errs = (typeof ErrLog !== 'undefined') ? ErrLog.list().slice(0, 8).map((e) => new Date(e.at).toLocaleString() + ' ' + e.kind + ' ' + e.msg) : [];
+  const txt = '【数学答疑 · 本机诊断】\n' + rows.join('\n') + (errs.length ? '\n\n最近错误：\n' + errs.join('\n') : '');
+  try { await copy(txt); toast('诊断信息已复制'); } catch (e) { alert(txt); }
+}
+
+async function openDiag() {
+  const s = $('diagSheet');
+  if (!s) return;
+  s.classList.remove('hide');
+  await renderDiag();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const on = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
+    on('btnDiag', openDiag);
+    on('btnDiag2', openDiag);
+    on('btnSnapNow', async () => {
+      const r = await Store.Snap.put('manual');
+      toast(r ? ('已快照 ' + r.n + ' 条 · ' + (r.bytes / 1024).toFixed(0) + ' KB') : '快照失败（索引库不可用）');
+      await renderDiag();
+    });
+    on('btnSnapRestore', async () => {
+      const L = await Store.Snap.list();
+      if (!L.length) return toast('还没有快照');
+      const t = new Date(L[0].at).toLocaleString();
+      if (!confirm('用最新快照（' + t + '，' + L[0].n + ' 条）覆盖当前记录？')) return;
+      const n = await Store.Snap.restore(L[0].at);
+      toast(n == null ? '恢复失败' : ('已恢复 ' + n + ' 条'));
+      try { renderHist(); } catch (e) { }
+      try { syncDueBar(); } catch (e) { }
+      await renderDiag();
+    });
+    on('btnErrClear', () => { try { ErrLog.clear(); } catch (e) { } renderDiag(); });
+    on('btnDiagCopy', diagCopy);
+
+    /* 引擎看护事件（重启 / 版本重装）全局监听：不管用户在哪个页面都能看到 */
+    if (window.onInstallProgress) {
+      try {
+        window.onInstallProgress((d) => {
+          const ph = (d && d.phase) || '';
+          if (ph !== 'watchdog' && ph !== 'version') return;
+          const msg = d.msg || (ph === 'watchdog' ? '引擎正在重启' : '引擎包版本更新，正在重装');
+          toast(msg, null, 6000);
+          const tip = $('engTip'); if (tip) tip.textContent = msg;
+          const card = $('engCard'); if (card) card.classList.remove('hide');
+          try { ErrLog.push('engine', msg); } catch (e) { }
+        });
+      } catch (e) { }
+    }
+
+    /* 启动自检 + 每日自动快照（延迟一点，避开启动期的写入） */
+    setTimeout(async () => {
+      try {
+        const rep = await Store.selfCheck();
+        if (rep.repaired) toast(rep.repaired, null, 6000);
+        if (!rep.ok) try { ErrLog.push('selfcheck', rep.notes.join(' / ')); } catch (e) { }
+      } catch (e) { }
+      try { await Store.Snap.maybeDaily(); } catch (e) { }
+    }, 1500);
+  } catch (e) { }
 });

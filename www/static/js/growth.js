@@ -217,7 +217,9 @@ async function coachAsk() {
   $g('coachBody').appendChild(holder);
   const body = holder.querySelector('.body');
   try {
-    const r = await callLLM(msgs, { onText: (t) => { body.innerHTML = render(t); } });
+    const cStream = mkStream(body);
+    const r = await callLLM(msgs, { onText: (t) => cStream.push(t) });
+    cStream.end(r.content);
     th.push({ role: 'assistant', content: r.content });
     body.innerHTML = render(r.content);
     save();

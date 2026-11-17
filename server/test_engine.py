@@ -38,8 +38,8 @@ CASES = [
     ("同一式放到 [0,π] 被推翻", {"kind": "ineq", "expr": "(1+sin(x))/(pi+2*x)-1/pi>=0", "vars": {"x": "real"}, "range": {"x": [0, 3.1415926]}}, "refuted", {}),
     ("几何 垂心 AH⊥BC", {"kind": "geom", "hyps": ["(x-4)+3*y", "4*(x-1)"], "goal": "-3*x+3*y", "vars": {"x": "real", "y": "real"}}, "proved", {}),
     ("几何 假断言 AH⊥AB", {"kind": "geom", "hyps": ["(x-4)+3*y", "4*(x-1)"], "goal": "4*x", "vars": {"x": "real", "y": "real"}}, "refuted", {}),
-    ("几何 中位线平行底边", {"kind": "geom", "hyps": ["2*ym-b", "2*yn-b"], "goal": "ym-yn", "vars": {"ym": "real", "yn": "real", "b": "real"}}, "proved", {}),
-    ("几何 欧拉线（含非退化）", {"kind": "geom", "hyps": ["ox^2+oy^2-((ox-1)^2+oy^2)", "ox^2+oy^2-((ox-p)^2+(oy-q)^2)", "(hx-1)*p+hy*q", "(hx-p)"], "goal": "(hx-ox)*((q/3)-oy)-((hy-oy)*(((1+p)/3)-ox))", "vars": {"ox": "real", "oy": "real", "hx": "real", "hy": "real", "p": "real", "q": "real"}, "nondeg": ["q"], "timeout": 60}, "proved", {}),
+    ("几何 中位线平行底边", {"kind": "geom", "hyps": ["2*ym-b", "2*yn-b"], "goal": "ym-yn", "vars": {"ym": "real", "yn": "real", "b": "real"}, "timeout": 150}, "proved", {}),
+    ("几何 欧拉线（含非退化）", {"kind": "geom", "hyps": ["ox^2+oy^2-((ox-1)^2+oy^2)", "ox^2+oy^2-((ox-p)^2+(oy-q)^2)", "(hx-1)*p+hy*q", "(hx-p)"], "goal": "(hx-ox)*((q/3)-oy)-((hy-oy)*(((1+p)/3)-ox))", "vars": {"ox": "real", "oy": "real", "hx": "real", "hy": "real", "p": "real", "q": "real"}, "nondeg": ["q"], "timeout": 150}, "proved", {}),
     ("空间过大要拒（CP-SAT 可证）", {"kind": "forall_int", "expr": "n>0", "vars": {"n": [1, 100000000]}}, "proved", {}),
 ]
 

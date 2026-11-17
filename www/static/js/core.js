@@ -477,3 +477,49 @@ function normAns(x) {
     .replace(/^答案[是为：:]*/, '')
     .toLowerCase();
 }
+
+/* ---- v2.3 诊断与流式渲染 ---- */
+
+/** 环形错误日志：只留最近 40 条，用来回答「刚才为什么失败」 */
+const ErrLog = (() => {
+  const KEY = 'mathapp.errlog';
+  let buf = [];
+  try { buf = JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (e) { buf = []; }
+  function flush() { try { localStorage.setItem(KEY, JSON.stringify(buf.slice(-40))); } catch (e) { } }
+  function push(kind, msg, extra) {
+    buf.push(Object.assign({ at: Date.now(), kind: String(kind || 'err'), msg: String(msg == null ? '' : msg).slice(0, 400) }, extra || {}));
+    if (buf.length > 40) buf = buf.slice(-40);
+    flush();
+  }
+  return { push, list: () => buf.slice().reverse(), clear() { buf = []; flush(); } };
+})();
+
+/** 流式渲染节流器：每 wait 毫秒最多整段重绘一次，收尾时再补一次终稿。
+    长答案（3 万 token）不再每个 chunk 都编译一遍 KaTeX。 */
+function mkStream(el, opts) {
+  const wait = (opts && opts.wait) || 90;
+  let timer = null, pend = null, last = 0, closed = false;
+  function paint(t) {
+    try { el.innerHTML = render(t); } catch (e) { el.textContent = t; }
+  }
+  function flush() {
+    timer = null;
+    if (pend == null || closed) return;
+    const t = pend; pend = null; last = Date.now(); paint(t);
+    if (typeof Mermaid !== 'undefined' && Mermaid.decorate) { try { Mermaid.decorate(el); } catch (e) { } }
+  }
+  return {
+    push(t) {
+      if (closed) return;
+      pend = t;
+      if (timer) return;
+      timer = setTimeout(flush, Math.max(0, wait - (Date.now() - last)));
+    },
+    end(t) {
+      if (timer) { clearTimeout(timer); timer = null; }
+      closed = true; pend = null;
+      if (t != null) paint(t);
+      return t;
+    },
+  };
+}

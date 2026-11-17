@@ -3,8 +3,9 @@
 
 const Store = (() => {
   const DB = 'mathapp';
-  const VER = 1;
+  const VER = 2;
   const ST = 'items';
+  const SN = 'snaps';
   let dbp = null;
 
   function open() {
@@ -15,6 +16,7 @@ const Store = (() => {
       rq.onupgradeneeded = () => {
         const d = rq.result;
         if (!d.objectStoreNames.contains(ST)) d.createObjectStore(ST, { keyPath: 'id' });
+        if (!d.objectStoreNames.contains(SN)) d.createObjectStore(SN, { keyPath: 'at' });
       };
       rq.onsuccess = () => res(rq.result);
       rq.onerror = () => rej(rq.error || new Error('IndexedDB 打不开'));
@@ -23,6 +25,8 @@ const Store = (() => {
   }
 
   const tx = (mode) => open().then((d) => d.transaction(ST, mode).objectStore(ST));
+  const txOf = (name, mode) => open().then((d) => d.transaction(name, mode).objectStore(name));
+  const req = (rq) => new Promise((res, rej) => { rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); });
 
   async function all() {
     const st = await tx('readonly');
@@ -227,7 +231,82 @@ const Store = (() => {
     try { await clear(); } catch (e) { /* 忽略 */ }
   }
 
-  return { open, all, mirror, queue, boot, exportZip, importFile, wipe, stamp };
+  /* ---- 自动快照：滚动保留 7 份，坏数据时能一键回到上一份 ---- */
+  const Snap = (() => {
+    const KEEP = 7;
+    async function put(label) {
+      const at = Date.now();
+      let data = JSON.stringify(S.items), dropped = 0;
+      if (data.length > 4000000) {
+        const slim = S.items.map((it) => {
+          const c = Object.assign({}, it);
+          if (c.img) { delete c.img; dropped++; }
+          if (Array.isArray(c.thread)) c.thread = c.thread.slice(-20);
+          if (Array.isArray(c.branches)) c.branches = c.branches.map((b) => Object.assign({}, b, { answer: String(b.answer || '').slice(0, 6000) }));
+          return c;
+        });
+        data = JSON.stringify(slim);
+      }
+      const row = { at, label: label || 'auto', n: S.items.length, bytes: data.length, dropped, data };
+      try { const st = await txOf(SN, 'readwrite'); await req(st.put(row)); await prune(); return row; }
+      catch (e) { return null; }
+    }
+    async function prune() {
+      try {
+        const st = await txOf(SN, 'readonly');
+        const rows = (await req(st.getAll())).sort((a, b) => b.at - a.at);
+        if (rows.length > KEEP) { const st2 = await txOf(SN, 'readwrite'); for (const r of rows.slice(KEEP)) st2.delete(r.at); }
+      } catch (e) { }
+    }
+    async function list() {
+      try { const st = await txOf(SN, 'readonly'); const rows = await req(st.getAll());
+        return rows.sort((a, b) => b.at - a.at).map((r) => ({ at: r.at, label: r.label, n: r.n, bytes: r.bytes, dropped: r.dropped || 0 }));
+      } catch (e) { return []; }
+    }
+    async function restore(at) {
+      try {
+        const st = await txOf(SN, 'readonly');
+        const row = await req(st.get(at));
+        if (!row) return null;
+        S.items = JSON.parse(row.data).map(normItem);
+        S.cur = null; save(); queue();
+        return S.items.length;
+      } catch (e) { return null; }
+    }
+    async function maybeDaily() {
+      const L = await list();
+      const last = L[0];
+      if (last && Date.now() - last.at < 20 * 3600 * 1000) return null;
+      return put('daily');
+    }
+    return { put, list, restore, maybeDaily, prune };
+  })();
+
+  /* ---- 启动自检：localStorage 坏了就自愈（先索引库，再最近快照） ---- */
+  async function selfCheck() {
+    const rep = { ok: true, lsItems: 0, idbItems: 0, snaps: 0, lastSnap: 0, repaired: '', notes: [] };
+    try { const raw = localStorage.getItem(LS); if (raw) rep.lsItems = (JSON.parse(raw).items || []).length; }
+    catch (e) { rep.ok = false; rep.notes.push('本机记录损坏：' + e.message); }
+    try { rep.idbItems = (await all()).length; } catch (e) { rep.notes.push('索引库不可用：' + e.message); }
+    try {
+      const L = await Snap.list();
+      rep.snaps = L.length; rep.lastSnap = L[0] ? L[0].at : 0;
+      if (!rep.ok || (rep.lsItems === 0 && rep.idbItems > 0)) {
+        if (rep.idbItems > 0) {
+          const rows = await all();
+          S.items = rows.map(normItem); save();
+          rep.repaired = '本机记录异常，已从索引库恢复 ' + rows.length + ' 条';
+        } else if (L[0]) {
+          const n = await Snap.restore(L[0].at);
+          if (n != null) rep.repaired = '已从快照恢复 ' + n + ' 条';
+        }
+        if (rep.repaired) { rep.ok = true; rep.notes.push(rep.repaired); }
+      }
+    } catch (e) { rep.notes.push('快照检查失败：' + e.message); }
+    return rep;
+  }
+
+  return { open, all, mirror, queue, boot, exportZip, importFile, wipe, stamp, Snap, selfCheck };
 })();
 
 /* 解答分支：同一道题保留多个版本（标准版 / 严格版 / 再修正版） */
