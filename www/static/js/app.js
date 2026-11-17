@@ -696,10 +696,23 @@ function bindEngine() {
       if (!st) return;
       if (st.ready) { card.classList.add('hide'); return; }
       card.classList.remove('hide');
+      if (!st.installed && !window.__autoEng) {
+        window.__autoEng = true;                       // 单文件 APK：自动解压内置引擎包
+        const off0 = window.onInstallProgress ? window.onInstallProgress((d) => {
+          setProg((d.msg || d.phase || '') + (d.pct ? '（' + d.pct + '%）' : ''));
+        }) : () => {};
+        window.engineInstallAuto().then((r) => {
+          setProg(r && r.ready ? '引擎已就绪 ✅' : '已解压，引擎正在启动…');
+          setTimeout(() => { if (window.lbReset) window.lbReset(); refresh(); }, 1500);
+        }).catch((e) => {
+          tip.textContent = '自动解压失败：' + (e && (e.message || e)) + '（可用下面的「手动选择引擎包」）';
+        }).finally(() => off0());
+        return;
+      }
       if (st.installed) {
         tip.textContent = st.starting ? '引擎正在启动…' : '引擎包已安装，但服务还没起来。点「启动 / 重试」，或看日志。';
       } else {
-        tip.textContent = '还没装引擎包。点「选择引擎包安装」，选 mathapp-engine-pack.tar.gz（约 212 MB），装完自动启动，之后离线可用。';
+        tip.textContent = '正在准备内置引擎包（约 645 MB，2–5 分钟，只在第一次做）。';
       }
     }).catch(() => { card.classList.remove('hide'); });
   };

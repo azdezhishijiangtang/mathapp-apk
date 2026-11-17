@@ -20,6 +20,10 @@ android {
     packagingOptions {
         jniLibs { useLegacyPackaging = true }   // 必须解压到 lib/，否则 proot 无法执行
     }
+    // 引擎包（rootfs.tar.gz）放 assets 里，已经是 gzip，别再压一遍
+    androidResources {
+        noCompress += ["gz"]
+    }
     buildTypes {
         release {
             minifyEnabled false

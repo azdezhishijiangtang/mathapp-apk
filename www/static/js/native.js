@@ -111,6 +111,13 @@
     return b.pickAndInstall();
   };
 
+  /* 单文件 APK：直接解压 APK 内置的 assets/rootfs.tar.gz */
+  window.engineInstallAuto = function () {
+    var b = be();
+    if (!isNative || !b) return Promise.reject(new Error('仅 APK 内可用'));
+    return b.installFromAssets();
+  };
+
   window.engineStart = function () {
     var b = be();
     if (!isNative || !b) return Promise.reject(new Error('仅 APK 内可用'));

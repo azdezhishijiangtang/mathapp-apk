@@ -67,23 +67,55 @@ public class LocalBackendPlugin extends Plugin {
     public void start(PluginCall call) {
         if (health(600)) { JSObject r = ok(true, false); call.resolve(r); return; }
         File d = rootfsReady();
-        if (d == null) { call.reject("引擎包未安装：请在设置里导入 rootfs.tar.gz"); return; }
-        if (starting) { call.reject("正在启动中"); return; }
-        try {
-            spawn(d);
-        } catch (Exception e) {
-            call.reject("启动失败：" + e.getMessage());
+        if (d == null && hasAssetPack()) {
+            final PluginCall c0 = call;
+            new Thread(() -> {
+                try {
+                    notify("extract", 0, "首次启动：解压内置引擎包…");
+                    extractStream(getContext().getAssets().open("rootfs.tar.gz"));
+                } catch (Exception e) {
+                    c0.reject("解压内置引擎包失败：" + e.getMessage());
+                    return;
+                }
+                doStart(c0);
+            }).start();
             return;
         }
-        final PluginCall c = call;
+        if (d == null) { call.reject("引擎包未安装：请点「选择引擎包安装」导入 rootfs.tar.gz"); return; }
+        if (starting) { call.reject("正在启动中"); return; }
+        doStart(call);
+    }
+
+    private void doStart(PluginCall c) {
+        starting = true;
+        try {
+            spawn(rootfsReady());
+        } catch (Exception e) { starting = false; c.reject("启动失败：" + e.getMessage()); return; }
         new Thread(() -> {
             boolean up = false;
-            for (int i = 0; i < 60 && !up; i++) {          // 最多等 30s
+            for (int i = 0; i < 80 && !up; i++) {          // 最多等 40s
                 try { Thread.sleep(500); } catch (InterruptedException ignored) {}
                 up = health(400);
             }
+            starting = false;
+            notify("done", 100, up ? "引擎已就绪" : "引擎还在启动");
             JSObject r = ok(up, true);
-            if (up) c.resolve(r); else c.reject("后端启动超时，点开日志看原因");
+            if (up) c.resolve(r); else c.reject("后端启动超时，点「看日志」看原因");
+        }).start();
+    }
+
+    /** 直接从 APK 内置的 assets/rootfs.tar.gz 安装（单文件 APK 用这个） */
+    @PluginMethod
+    public void installFromAssets(PluginCall call) {
+        if (!hasAssetPack()) { call.reject("这个 APK 没有内置引擎包，请用「选择引擎包安装」手动导"); return; }
+        final PluginCall c = call;
+        new Thread(() -> {
+            try {
+                extractStream(getContext().getAssets().open("rootfs.tar.gz"));
+                doStart(c);
+            } catch (Exception e) {
+                c.reject("安装失败：" + e.getMessage());
+            }
         }).start();
     }
 
@@ -255,12 +287,28 @@ public class LocalBackendPlugin extends Plugin {
     }
 
     private void extract(File tarGz) throws IOException {
+        try (InputStream raw = new java.io.BufferedInputStream(new java.io.FileInputStream(tarGz), 1 << 20)) {
+            extractStream(raw);
+        }
+    }
+
+    /** 内置引擎包是否随 APK 打包（assets/rootfs.tar.gz） */
+    private boolean hasAssetPack() {
+        try {
+            String[] list = getContext().getAssets().list("");
+            if (list == null) return false;
+            for (String n : list) if ("rootfs.tar.gz".equals(n)) return true;
+        } catch (IOException ignored) {}
+        return false;
+    }
+
+    private void extractStream(InputStream rawIn) throws IOException {
         File d = dir();
         deleteRec(d);
         d.mkdirs();
+        notify("extract", 0, "开始解压…");
         try (TarArchiveInputStream tin =
-                     new TarArchiveInputStream(new GZIPInputStream(new java.io.BufferedInputStream(
-                             new java.io.FileInputStream(tarGz), 1 << 20)))) {
+                     new TarArchiveInputStream(new GZIPInputStream(new java.io.BufferedInputStream(rawIn, 1 << 20)))) {
             TarArchiveEntry e;
             byte[] buf = new byte[1 << 16];
             int seen = 0;

@@ -9,10 +9,22 @@ on:
 
 jobs:
   apk:
-    name: APK（完整版外壳，含 proot 运行时）
+    name: APK（单文件完整版：外壳 + 引擎包）
     runs-on: ubuntu-latest
+    needs: engine-pack
     steps:
       - uses: actions/checkout@v4
+
+      - name: 取引擎包并放进 APK assets
+        uses: actions/download-artifact@v4
+        with:
+          name: engine-pack
+          path: android/app/src/main/assets
+
+      - name: 核对引擎包已就位
+        run: |
+          ls -lh android/app/src/main/assets/
+          test -f android/app/src/main/assets/rootfs.tar.gz
 
       - uses: actions/setup-java@v4
         with:
