@@ -153,3 +153,21 @@ jobs:
 
       - name: 跑引擎回归
         run: python server/test_engine.py
+
+      - name: 写更新清单 update/version.json
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          test -f "$APK"
+          VCODE=$(grep -oP "versionCode\s+\K\d+" android/app/build.gradle | head -1)
+          VNAME=$(grep -oP 'versionName\s+"\K[^"]+' android/app/build.gradle | head -1)
+          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "$APK")
+          URL="https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk"
+          mkdir -p update
+          printf '{\n  "versionCode": %s,\n  "versionName": "%s",\n  "url": "%s",\n  "size": %s,\n  "sha256": "%s",\n  "notes": "v%s：应用内更新；对话式极简界面；引导只出现一次。"\n}\n' "$VCODE" "$VNAME" "$URL" "$SIZE" "$SHA" "$VNAME" > update/version.json
+          cat update/version.json
+          git config user.name "mathapp-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add update/version.json
+          git commit -m "chore: 更新清单 $VNAME ($VCODE) [skip ci]" || echo "清单无变化"
+          git push || echo "push 失败（下次构建会再写）"

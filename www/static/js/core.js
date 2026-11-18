@@ -8,7 +8,8 @@ const S = {
   cfg: {
     base: '', key: '', model: '', maxTokens: 24000, temp: 0.6,
     model2: '', modelCheap: '', capDaily: 0,
-    autoVerify: true, autoRetry: true, visionModel: '', vcap: {}, onboarded: 0, updUrl: ''
+    autoVerify: true, autoRetry: true, visionModel: '', vcap: {}, onboarded: 0,
+    updUrl: 'https://raw.githubusercontent.com/azdezhishijiangtang/mathapp-apk/main/update/version.json'
   },
   items: [],          // 记录（含收藏）
   cur: null,          // 当前这条记录
