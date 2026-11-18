@@ -25,7 +25,7 @@ w.fetch = async () => ({ ok: true, json: async () => ({ engines: [], version: 't
 w.katex = { renderToString: (tex) => '<span class="katex-stub">' + tex + '</span>' };
 
 const src = FILES.map((f) => fs.readFileSync(path.join(JS, f), 'utf8')).join('\n;\n') +
-  '\n;window.__exp={S,Mods,Tree,Store,Branch,render,toast,syncDueBar,boxedOf,normAns,renderVerify,renderCross,callLLM,mkStream,ErrLog,renderDiag,syncOnboard,save};';
+  '\n;window.__exp={S,Mods,Tree,Store,Branch,render,toast,syncDueBar,boxedOf,normAns,renderVerify,renderCross,callLLM,mkStream,ErrLog,renderDiag,syncOnboard,save,updCheck,updGo};';
 try { w.eval(src); } catch (e) { fail.push('脚本加载失败: ' + e.message); }
 w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
 const X = w.__exp || {};
@@ -159,6 +159,13 @@ ok('空状态有四个建议', w.document.querySelectorAll('#exChips [data-ex]')
 ok('旧的大表单已拆掉', !w.document.querySelector('section.ask'));
 ok('输入坞固定在底部', /\.dock\{position:fixed/.test(css));
 ok('答案消息块去掉卡片样式', /#colR>section\{border:0!important/.test(css));
+
+// v3.0 应用内更新
+ok('更新弹窗存在', !!w.document.getElementById('updSheet'));
+ok('下载并安装按钮存在', !!w.document.getElementById('updGo'));
+ok('设置里有检查更新地址', !!w.document.getElementById('cfgUpdUrl'));
+ok('更新流程函数可用', typeof X.updCheck === 'function' && typeof X.updGo === 'function');
+ok('原生插件缺失时给提示而不崩', (await X.updCheck(true)) === undefined);
 
 try { w.close(); } catch (e) {}
 if (fail.length) { console.log('\n失败 ' + fail.length + ' 项'); process.exit(1); }

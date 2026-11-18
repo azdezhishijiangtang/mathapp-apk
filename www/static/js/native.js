@@ -130,3 +130,39 @@
     return b.log();
   };
 })();
+
+
+/* ---------- 应用内更新（原生 Updater 插件） ---------- */
+function updPlugin() {
+  return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Updater) || null;
+}
+window.updAvailable = function () { return !!updPlugin(); };
+window.updCurrent = async function () {
+  const pl = updPlugin();
+  if (!pl) return { versionCode: 0, versionName: 'web' };
+  return await pl.current();
+};
+window.updCanInstall = async function () {
+  const pl = updPlugin();
+  if (!pl) return { ok: false };
+  return await pl.canInstall();
+};
+window.updOpenSettings = function () {
+  const pl = updPlugin();
+  if (pl && pl.openUnknownSources) return pl.openUnknownSources();
+};
+window.updProgress = function (cb) {
+  const pl = updPlugin();
+  if (!pl || !pl.addListener) return;
+  pl.addListener('progress', (d) => { try { cb(Number(d.got || 0), Number(d.total || 0)); } catch (e) { } });
+};
+window.updDownload = async function (url, sha256, name) {
+  const pl = updPlugin();
+  if (!pl) throw new Error('只有 App 里才能下载安装');
+  return await pl.download({ url: url, sha256: sha256 || '', name: name || 'mathapp-update.apk' });
+};
+window.updInstall = async function (path) {
+  const pl = updPlugin();
+  if (!pl) throw new Error('只有 App 里才能安装');
+  return await pl.install({ path: path });
+};

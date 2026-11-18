@@ -208,6 +208,8 @@
     </div>
     <label class="chk"><input type="checkbox" id="cfgVerify" checked> 自动本地验证</label>
     <label class="chk"><input type="checkbox" id="cfgRetry" checked> 正文为空时自动加倍预算重试</label>
+    <label>检查更新地址（version.json 直链，留空=不检查）<input id="cfgUpdUrl" placeholder="https://example.com/mathapp/version.json" inputmode="url" autocomplete="off"></label>
+    <div class="row"><button class="ghost" id="btnUpdCheck">立即检查更新</button></div>
     <div class="presets">
       <button class="ghost" data-preset="wb">本机网关</button>
       <button class="ghost" data-preset="ds">DeepSeek</button>
@@ -382,5 +384,20 @@
   <div class="meta">拖动旋转，双指/滚轮缩放；导出的图会进图片识别流程。</div>
 </section>
 <div id="toast" class="toast hide"></div>
+
+<!-- 发现新版本 -->
+<div class="sheet hide" id="updSheet">
+  <div class="sheetIn">
+    <h3 id="updTitle">发现新版本</h3>
+    <div class="meta" id="updMeta"></div>
+    <div class="body" id="updNotes" style="margin:12px 0"></div>
+    <div class="meta" id="updProg"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="primary" id="updGo">下载并安装</button>
+      <button class="ghost" id="updLater">稍后</button>
+    </div>
+    <div class="meta" style="margin-top:10px">安装最后一步由系统弹窗确认，App 不能静默装；装完数据都还在。</div>
+  </div>
+</div>
 </body>
 </html>

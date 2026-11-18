@@ -519,6 +519,7 @@ function openCfg() {
   if ($('cfgModel2')) $('cfgModel2').value = S.cfg.model2 || '';
   if ($('cfgModelCheap')) $('cfgModelCheap').value = S.cfg.modelCheap || '';
   if ($('cfgCapDaily')) $('cfgCapDaily').value = S.cfg.capDaily || 0;
+  if ($('cfgUpdUrl')) $('cfgUpdUrl').value = S.cfg.updUrl || '';
   $('cfgTemp').value = S.cfg.temp; $('cfgVerify').checked = S.cfg.autoVerify;
   $('cfgRetry').checked = S.cfg.autoRetry;
   $('cfgTestOut').textContent = '';
@@ -534,6 +535,7 @@ function readCfgFromForm() {
     model2: (($('cfgModel2') && $('cfgModel2').value) || '').trim(),
     modelCheap: (($('cfgModelCheap') && $('cfgModelCheap').value) || '').trim(),
     capDaily: Math.max(0, +((($('cfgCapDaily') && $('cfgCapDaily').value) || 0)) || 0),
+    updUrl: (((($('cfgUpdUrl') && $('cfgUpdUrl').value) || '')) || '').trim(),
     maxTokens: +$('cfgMax').value || 24000,
     temp: (() => { const v = parseFloat($('cfgTemp').value); return isNaN(v) ? 0.6 : v; })(),
     autoVerify: $('cfgVerify').checked,
@@ -770,6 +772,12 @@ function bind() {
   };
   $('btnStop').onclick = () => { if (S.abort) S.abort.abort(); };
   $('btnClearQ').onclick = () => { $('q').value = ''; updateQMeta(); autoGrow(); };
+  const bUpd = $('btnUpdCheck');
+  if (bUpd) bUpd.onclick = () => updCheck(false);
+  const uGo = $('updGo');
+  if (uGo) uGo.onclick = updGo;
+  const uLater = $('updLater');
+  if (uLater) uLater.onclick = () => $('updSheet').classList.add('hide');
   const bKbd = $('btnKbd');
   if (bKbd) bKbd.onclick = () => { const w = $('kbdWrap'); if (w) { w.classList.toggle('hide'); w.open = !w.classList.contains('hide'); } };
   const chips = document.querySelectorAll('#exChips [data-ex]');
@@ -1110,6 +1118,61 @@ function syncHero() {
   const ans = $('answer');
   const visible = !!(ans && !ans.classList.contains('hide'));
   h.classList.toggle('hide', visible);
+}
+
+/* ---------- 应用内更新 ---------- */
+async function updCheck(silent) {
+  const url = String((S.cfg.updUrl || '')).trim();
+  if (!url) { if (!silent) toast('还没填「检查更新地址」'); return; }
+  if (!window.updAvailable || !window.updAvailable()) { if (!silent) toast('网页版请直接重新下载安装包'); return; }
+  try {
+    const cur = await window.updCurrent();
+    const r = await fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const m = await r.json();
+    if (!m || !m.versionCode) throw new Error('version.json 内容不对');
+    if (Number(m.versionCode) <= Number(cur.versionCode || 0)) {
+      if (!silent) toast('已是最新版本 ' + (cur.versionName || ''));
+      return;
+    }
+    window.__upd = m;
+    $('updTitle').textContent = '发现新版本 ' + (m.versionName || m.versionCode);
+    $('updMeta').textContent = (m.size ? (m.size / 1048576).toFixed(1) + ' MB · ' : '') +
+      (m.sha256 ? 'sha256 ' + String(m.sha256).slice(0, 12) + '…' : '');
+    $('updNotes').innerHTML = render(m.notes || '稳定性与界面改进。');
+    $('updProg').textContent = '';
+    $('updGo').classList.remove('hide');
+    $('updSheet').classList.remove('hide');
+  } catch (e) {
+    if (!silent) toast('检查更新失败：' + e.message);
+  }
+}
+
+async function updGo() {
+  const m = window.__upd;
+  if (!m || !m.url) { toast('这份 version.json 没给下载地址'); return; }
+  try {
+    const can = await window.updCanInstall();
+    if (can && can.ok === false) {
+      window.updOpenSettings();
+      toast('请先允许「安装未知应用」，再回来点一次');
+      return;
+    }
+    $('updGo').classList.add('hide');
+    $('updProg').textContent = '准备下载…';
+    window.updProgress((got, total) => {
+      $('updProg').textContent = total > 0
+        ? '下载中 ' + Math.round(got * 100 / total) + '%（' + (got / 1048576).toFixed(1) + ' / ' + (total / 1048576).toFixed(0) + ' MB）'
+        : '下载中 ' + (got / 1048576).toFixed(1) + ' MB';
+    });
+    const r = await window.updDownload(m.url, m.sha256 || '', 'mathapp-' + (m.versionName || m.versionCode) + '.apk');
+    $('updProg').textContent = '下载完成（校验通过），正在打开安装程序…';
+    await window.updInstall(r.path);
+    setTimeout(() => { $('updSheet').classList.add('hide'); }, 1200);
+  } catch (e) {
+    $('updProg').textContent = '更新失败：' + e.message;
+    $('updGo').classList.remove('hide');
+  }
 }
 
 function newSession() {
