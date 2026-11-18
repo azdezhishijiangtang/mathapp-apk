@@ -1,8 +1,8 @@
 {
-  "versionCode": 12,
-  "versionName": "3.0",
+  "versionCode": 13,
+  "versionName": "3.1",
   "url": "https://github.com/azdezhishijiangtang/mathapp-apk/releases/latest/download/app-release.apk",
-  "size": 0,
-  "sha256": "",
-  "notes": "v3.0：应用内更新（检查→弹窗→下载→安装）；对话式极简界面；引导只出现一次。"
+  "size": 235284834,
+  "sha256": "df2091870d4706fe9bc805112253606920b7b282acc3112a59c986755b6f80e5",
+  "notes": "v3.1：应用内更新；对话式极简界面；引导只出现一次。"
 }
